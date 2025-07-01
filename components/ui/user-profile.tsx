@@ -8,6 +8,7 @@ interface UserStats {
   points: number;
   level: string;
   totalQuizzes: number;
+  name: string;
 }
 
 export function UserProfile() {
@@ -19,9 +20,12 @@ export function UserProfile() {
     const initializeUser = async () => {
       try {
         // Initialize user in database
-        await fetch('/api/user/init', {
+        const response = await fetch('/api/user/init', {
           method: 'POST',
         });
+        if (!response.ok) throw new Error('Failed to initialize user');
+        const data = await response.json();
+        return data;
       } catch (error) {
         console.error('Error initializing user:', error);
       }
@@ -53,12 +57,12 @@ export function UserProfile() {
         <div className="w-12 h-12 rounded-full overflow-hidden">
           <img 
             src={user.imageUrl || 'https://via.placeholder.com/40'} 
-            alt={user.fullName || 'User'} 
+            alt={stats?.name || user.fullName || 'User'} 
             className="w-full h-full object-cover"
           />
         </div>
         <div>
-          <h3 className="font-semibold">{user.fullName || 'User'}</h3>
+          <h3 className="font-semibold">{stats?.name || user.fullName || 'User'}</h3>
           {stats && (
             <p className="text-sm text-gray-600">Level: {stats.level}</p>
           )}

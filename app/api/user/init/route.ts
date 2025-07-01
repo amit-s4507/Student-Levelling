@@ -13,6 +13,17 @@ export async function POST() {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    // Get the best available name
+    const userName = user.firstName && user.lastName 
+      ? `${user.firstName} ${user.lastName}`
+      : user.firstName 
+      ? user.firstName
+      : user.username 
+      ? user.username
+      : user.emailAddresses[0]?.emailAddress?.split('@')[0] 
+      ? user.emailAddresses[0].emailAddress.split('@')[0]
+      : 'Student';
+
     // Check if user already exists
     let dbUser = await prisma.user.findUnique({
       where: { id: userId }
@@ -23,9 +34,7 @@ export async function POST() {
       dbUser = await prisma.user.create({
         data: {
           id: userId,
-          name: user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}` 
-            : user.username || 'Anonymous User',
+          name: userName,
           email: user.emailAddresses[0]?.emailAddress,
           points: 0,
           level: 'Beginner',
@@ -45,7 +54,7 @@ export async function POST() {
         achievementTypes.map(achievement =>
           prisma.achievement.create({
             data: {
-              userId: dbUser.id,
+              userId: dbUser!.id,
               type: achievement.type,
               progress: 0,
               maxProgress: achievement.maxProgress,
@@ -54,6 +63,14 @@ export async function POST() {
           })
         )
       );
+    } else {
+      // Always update the name if it's different from the current best name
+      if (dbUser.name !== userName) {
+        dbUser = await prisma.user.update({
+          where: { id: userId },
+          data: { name: userName }
+        });
+      }
     }
 
     return NextResponse.json(dbUser);

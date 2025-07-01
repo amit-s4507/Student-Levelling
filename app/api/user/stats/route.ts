@@ -59,6 +59,7 @@ export async function GET() {
 
     return NextResponse.json({
       points: user.points,
+      name: user.name,
       level,
       totalQuizzes,
       courseProgress,

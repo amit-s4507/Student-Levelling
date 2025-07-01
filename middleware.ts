@@ -10,10 +10,20 @@ export default authMiddleware({
     "/sign-up",
     "/api/webhook",
     "/Home"
+  ],
+  ignoredRoutes: [
+    "/((?!api|trpc))(_next|.+\\.[\\w]+$)", // Ignore static files
+    "/favicon.ico",
+    "/api/chat", // Allow public access to chat API
+    "/api/imagen", // Allow public access to imagen API
   ]
 });
 
 export const config = {
-  matcher: ['/((?!.+\\.[\\w]+$|_next|favicon.ico).*)', '/']
+  matcher: [
+    "/((?!.*\\..*|_next).*)",
+    "/",
+    "/(api|trpc)(.*)"
+  ]
 };
  
