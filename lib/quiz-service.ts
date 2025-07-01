@@ -148,12 +148,26 @@ function generateMathQuestion(): Question {
     default: correctAnswer = num1 + num2;
   }
   
-  const options = [
-    correctAnswer.toString(),
+  // Generate wrong options that are different from each other and the correct answer
+  const wrongAnswers = new Set<string>();
+  
+  // Add mathematically plausible wrong answers
+  const plausibleWrongAnswers: string[] = [
     (correctAnswer + Math.floor(Math.random() * 10) + 1).toString(),
     (correctAnswer - Math.floor(Math.random() * 10) - 1).toString(),
-    (correctAnswer * 2).toString()
-  ].sort(() => Math.random() - 0.5);
+    (op === '*' ? correctAnswer + num1 : correctAnswer * 2).toString(),
+    (op === '*' ? correctAnswer - num2 : Math.abs(num1 - num2)).toString(),
+    (op === '+' ? num1 * num2 : num1 + num2).toString()
+  ];
+
+  while (wrongAnswers.size < 3) {
+    const wrongAnswer = plausibleWrongAnswers[Math.floor(Math.random() * plausibleWrongAnswers.length)];
+    if (wrongAnswer !== correctAnswer.toString()) {
+      wrongAnswers.add(wrongAnswer);
+    }
+  }
+
+  const options = [correctAnswer.toString(), ...Array.from(wrongAnswers)].sort(() => Math.random() - 0.5);
 
   return {
     question: `What is ${num1} ${op} ${num2}?`,
@@ -170,13 +184,23 @@ function generateProgrammingQuestion(): Question {
   const concepts = [
     {
       template: "What is the output of: console.log({value})?",
-      values: ['2 + "2"', '"2" + 2', '2 + 2', 'true + 1'],
-      answers: ['22', '22', '4', '2']
+      values: ['2 + "2"', '"2" + 2', '2 + 2', 'true + 1', 'false + 1', '1 + "1"', '"1" + 1', 'null + 1'],
+      answers: ['22', '22', '4', '2', '1', '11', '11', '1']
     },
     {
       template: "Which data type is {value} in JavaScript?",
-      values: ['null', 'undefined', '[]', '{}'],
-      answers: ['object', 'undefined', 'object', 'object']
+      values: ['null', 'undefined', '[]', '{}', 'NaN', 'true', '42', '"42"'],
+      answers: ['object', 'undefined', 'object', 'object', 'number', 'boolean', 'number', 'string']
+    },
+    {
+      template: "What will be the value of: {value}",
+      values: ['typeof null', 'typeof undefined', 'typeof []', 'typeof {}', 'typeof NaN', 'typeof function(){}'],
+      answers: ['object', 'undefined', 'object', 'object', 'number', 'function']
+    },
+    {
+      template: "What is the result of: {value}?",
+      values: ['[] + []', '{} + {}', '[] + {}', '{} + []', '[] == ![]', 'true + true'],
+      answers: ['""', '[object Object][object Object]', '[object Object]', '0', 'true', '2']
     }
   ];
   
@@ -184,10 +208,29 @@ function generateProgrammingQuestion(): Question {
   const index = Math.floor(Math.random() * concept.values.length);
   
   const correctAnswer = concept.answers[index];
-  const options = [
-    correctAnswer,
-    ...concept.answers.filter((a, i) => i !== index)
-  ].sort(() => Math.random() - 0.5).slice(0, 4);
+  
+  // Generate wrong options that are different from each other and the correct answer
+  const wrongAnswers = new Set<string>();
+  const allPossibleAnswers = concept.answers.filter(a => a !== correctAnswer);
+  
+  while (wrongAnswers.size < 3 && allPossibleAnswers.length > 0) {
+    const randomIndex = Math.floor(Math.random() * allPossibleAnswers.length);
+    const wrongAnswer = allPossibleAnswers[randomIndex];
+    wrongAnswers.add(wrongAnswer);
+    allPossibleAnswers.splice(randomIndex, 1);
+  }
+
+  // If we don't have enough wrong answers, generate some
+  while (wrongAnswers.size < 3) {
+    const randomValue = Math.random() < 0.5 
+      ? `${Math.floor(Math.random() * 100)}`
+      : `value${Math.floor(Math.random() * 100)}`;
+    if (randomValue !== correctAnswer) {
+      wrongAnswers.add(randomValue);
+    }
+  }
+
+  const options = [correctAnswer, ...Array.from(wrongAnswers)].sort(() => Math.random() - 0.5);
 
   return {
     question: concept.template.replace('{value}', concept.values[index]),
@@ -201,97 +244,131 @@ function generateProgrammingQuestion(): Question {
 }
 
 function generateScienceQuestion(): Question {
-  type QuestionType = {
-    template: string;
-    elements?: string[];
-    quantities?: string[];
-    answers: string[];
-  };
-
-  const questions: QuestionType[] = [
+  const questions = [
     {
       template: "What is the chemical symbol for {element}?",
-      elements: ['Gold', 'Silver', 'Iron', 'Copper'],
-      answers: ['Au', 'Ag', 'Fe', 'Cu']
+      elements: ['Gold', 'Silver', 'Iron', 'Copper', 'Sodium', 'Potassium', 'Carbon', 'Oxygen', 'Nitrogen', 'Helium'],
+      answers: ['Au', 'Ag', 'Fe', 'Cu', 'Na', 'K', 'C', 'O', 'N', 'He']
     },
     {
       template: "What is the unit of measurement for {quantity}?",
-      quantities: ['force', 'pressure', 'energy', 'power'],
-      answers: ['Newton', 'Pascal', 'Joule', 'Watt']
+      quantities: ['force', 'pressure', 'energy', 'power', 'electric current', 'temperature', 'luminous intensity', 'frequency'],
+      answers: ['Newton', 'Pascal', 'Joule', 'Watt', 'Ampere', 'Kelvin', 'Candela', 'Hertz']
+    },
+    {
+      template: "Which element has the atomic number {number}?",
+      numbers: ['1', '2', '6', '7', '8', '11', '12', '13', '26', '79'],
+      answers: ['Hydrogen', 'Helium', 'Carbon', 'Nitrogen', 'Oxygen', 'Sodium', 'Magnesium', 'Aluminum', 'Iron', 'Gold']
     }
   ];
   
   const questionType = questions[Math.floor(Math.random() * questions.length)];
-  const isChemistry = 'elements' in questionType;
-  const values = isChemistry ? questionType.elements! : questionType.quantities!;
+  const isAtomicNumber = 'numbers' in questionType;
+  const values = isAtomicNumber ? questionType.numbers! : 
+                'elements' in questionType ? questionType.elements! : 
+                questionType.quantities!;
   const index = Math.floor(Math.random() * values.length);
   
   const correctAnswer = questionType.answers[index];
-  const options = [
-    correctAnswer,
-    ...questionType.answers.filter((a, i) => i !== index)
-  ].sort(() => Math.random() - 0.5).slice(0, 4);
+  
+  // Generate wrong options that are different from each other and the correct answer
+  const wrongAnswers = new Set<string>();
+  const allPossibleAnswers = questionType.answers.filter(a => a !== correctAnswer);
+  
+  while (wrongAnswers.size < 3 && allPossibleAnswers.length > 0) {
+    const randomIndex = Math.floor(Math.random() * allPossibleAnswers.length);
+    const wrongAnswer = allPossibleAnswers[randomIndex];
+    wrongAnswers.add(wrongAnswer);
+    allPossibleAnswers.splice(randomIndex, 1);
+  }
+
+  const options = [correctAnswer, ...Array.from(wrongAnswers)].sort(() => Math.random() - 0.5);
 
   return {
     question: questionType.template.replace(
-      isChemistry ? '{element}' : '{quantity}',
+      isAtomicNumber ? '{number}' : 
+      'elements' in questionType ? '{element}' : 
+      '{quantity}',
       values[index]
     ),
     options,
     correctOption: correctAnswer,
     difficulty: 'medium',
-    category: isChemistry ? 'chemistry' : 'physics',
+    category: isAtomicNumber || 'elements' in questionType ? 'chemistry' : 'physics',
     attemptCount: 0,
     successRate: 0
   };
 }
 
 export async function recordQuizAttempt(userId: string, courseId: string, score: number, total: number) {
-  // Record the attempt
-  await prisma.quizAttempt.create({
-    data: {
-      userId,
-      courseId,
-      score,
-      total,
-    }
-  });
-
-  // Update user points (10 points per correct answer)
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      points: {
-        increment: score * 10
+  try {
+    // Record the attempt
+    await prisma.quizAttempt.create({
+      data: {
+        userId,
+        courseId,
+        score,
+        total,
       }
-    }
-  });
+    });
 
-  // Check and update achievements
-  await updateAchievements(userId, courseId, score, total);
+    // Calculate points (10 points per correct answer)
+    const pointsEarned = score * 10;
+
+    // Update user points
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        points: {
+          increment: pointsEarned
+        }
+      },
+      select: {
+        points: true
+      }
+    });
+
+    // Check and update achievements
+    const newAchievements = await updateAchievements(userId, courseId, score, total);
+
+    return {
+      score,
+      points: pointsEarned,
+      totalPoints: updatedUser.points,
+      newAchievements
+    };
+  } catch (error) {
+    console.error('Error recording quiz attempt:', error);
+    throw error;
+  }
 }
 
 async function updateAchievements(userId: string, courseId: string, score: number, total: number) {
+  const newAchievements: string[] = [];
+
   // Get user's current achievements
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { achievements: true }
   });
 
-  if (!user) return;
+  if (!user) return newAchievements;
 
   // Update course-specific achievements
   if (courseId === 'math') {
-    await updateMathAchievements(userId, score, total);
+    const mathAchievement = await updateMathAchievements(userId, score, total);
+    if (mathAchievement) newAchievements.push(mathAchievement);
   } else if (courseId === 'programming') {
-    await updateProgrammingAchievements(userId, score, total);
+    const programmingAchievement = await updateProgrammingAchievements(userId, score, total);
+    if (programmingAchievement) newAchievements.push(programmingAchievement);
   } else if (courseId === 'science') {
-    await updateScienceAchievements(userId, score, total);
+    const scienceAchievement = await updateScienceAchievements(userId, score, total);
+    if (scienceAchievement) newAchievements.push(scienceAchievement);
   }
 
   // Update general achievements
   if (score === total) {
-    await prisma.achievement.upsert({
+    const perfectScore = await prisma.achievement.upsert({
       where: {
         userId_type: {
           userId,
@@ -310,7 +387,13 @@ async function updateAchievements(userId: string, courseId: string, score: numbe
         completed: true
       }
     });
+
+    if (perfectScore.completed) {
+      newAchievements.push('Perfect Score');
+    }
   }
+
+  return newAchievements;
 }
 
 async function updateMathAchievements(userId: string, score: number, total: number) {
@@ -323,7 +406,7 @@ async function updateMathAchievements(userId: string, score: number, total: numb
   });
 
   if (attempts >= 3) {
-    await prisma.achievement.upsert({
+    const achievement = await prisma.achievement.upsert({
       where: {
         userId_type: {
           userId,
@@ -342,7 +425,12 @@ async function updateMathAchievements(userId: string, score: number, total: numb
         completed: attempts >= 3
       }
     });
+
+    if (achievement.completed) {
+      return 'Math Whiz';
+    }
   }
+  return null;
 }
 
 async function updateProgrammingAchievements(userId: string, score: number, total: number) {
@@ -353,7 +441,7 @@ async function updateProgrammingAchievements(userId: string, score: number, tota
     }
   });
 
-  await prisma.achievement.upsert({
+  const achievement = await prisma.achievement.upsert({
     where: {
       userId_type: {
         userId,
@@ -372,6 +460,11 @@ async function updateProgrammingAchievements(userId: string, score: number, tota
       completed: attempts >= 10
     }
   });
+
+  if (achievement.completed) {
+    return 'Coding Master';
+  }
+  return null;
 }
 
 async function updateScienceAchievements(userId: string, score: number, total: number) {
@@ -382,7 +475,7 @@ async function updateScienceAchievements(userId: string, score: number, total: n
     }
   });
 
-  await prisma.achievement.upsert({
+  const achievement = await prisma.achievement.upsert({
     where: {
       userId_type: {
         userId,
@@ -401,6 +494,11 @@ async function updateScienceAchievements(userId: string, score: number, total: n
       completed: attempts >= 5
     }
   });
+
+  if (achievement.completed) {
+    return 'Science Explorer';
+  }
+  return null;
 }
 
 export async function getLeaderboard() {

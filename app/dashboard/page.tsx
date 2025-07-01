@@ -1,108 +1,156 @@
-import { auth } from "@clerk/nextjs";
-import { redirect } from "next/navigation";
-import { headers } from 'next/headers';
-import Link from 'next/link';
+"use client";
 
-export default async function DashboardPage() {
-  const headersList = headers();
-  const { userId } = await auth();
+import { useState, useEffect } from 'react';
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { UserProfile } from "@/components/ui/user-profile";
+import Link from "next/link";
 
-  if (!userId) {
-    redirect("/");
+interface CourseProgress {
+  programming: number;
+  math: number;
+  science: number;
+}
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const { user, isLoaded } = useUser();
+  const [progress, setProgress] = useState<CourseProgress>({
+    programming: 0,
+    math: 0,
+    science: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    if (!user) {
+      router.push("/sign-in");
+      return;
+    }
+
+    const fetchProgress = async () => {
+      try {
+        const response = await fetch('/api/user/stats');
+        if (!response.ok) throw new Error('Failed to fetch user stats');
+        const data = await response.json();
+        setProgress(data.courseProgress);
+      } catch (error) {
+        console.error('Error fetching progress:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProgress();
+  }, [user, isLoaded, router]);
+
+  const courses = [
+    {
+      id: 'programming',
+      title: 'Programming Fundamentals',
+      description: 'Learn the basics of programming with interactive lessons',
+      progress: progress.programming,
+      color: 'bg-blue-500'
+    },
+    {
+      id: 'math',
+      title: 'Mathematics',
+      description: 'Master mathematical concepts through gamified learning',
+      progress: progress.math,
+      color: 'bg-green-500'
+    },
+    {
+      id: 'science',
+      title: 'Science',
+      description: 'Explore scientific concepts with interactive experiments',
+      progress: progress.science,
+      color: 'bg-purple-500'
+    }
+  ];
+
+  const features = [
+    {
+      title: 'AI Chat Assistant',
+      description: 'Get help with your studies',
+      href: '/Chat',
+      color: 'bg-pink-50'
+    },
+    {
+      title: 'Leaderboard',
+      description: 'See where you rank',
+      href: '/Leaderboard',
+      color: 'bg-yellow-50'
+    },
+    {
+      title: 'Achievements',
+      description: 'View your badges',
+      href: '/achievements',
+      color: 'bg-green-50'
+    },
+    {
+      title: 'Image Generator',
+      description: 'Create learning visuals',
+      href: '/Imagen',
+      color: 'bg-blue-50'
+    }
+  ];
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-20 bg-gray-200 rounded"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-48 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">My Learning Dashboard</h1>
-      
-      <div className="grid gap-6 md:grid-cols-3">
-        <Link href="/courses/programming" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
-          <h2 className="text-xl font-semibold mb-4">Programming Fundamentals</h2>
-          <p className="text-gray-600 mb-4">Learn the basics of programming with interactive lessons</p>
-          <div className="relative pt-1">
-            <div className="flex mb-2 items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">
-                  Progress
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-semibold inline-block text-blue-600">
-                  33%
-                </span>
-              </div>
-            </div>
-            <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200">
-              <div style={{ width: "33%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"></div>
-            </div>
-          </div>
-        </Link>
+      <UserProfile />
 
-        <Link href="/courses/math" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
-          <h2 className="text-xl font-semibold mb-4">Mathematics</h2>
-          <p className="text-gray-600 mb-4">Master mathematical concepts through gamified learning</p>
-          <div className="relative pt-1">
-            <div className="flex mb-2 items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">
-                  Progress
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-semibold inline-block text-green-600">
-                  50%
-                </span>
-              </div>
-            </div>
-            <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
-              <div style={{ width: "50%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500"></div>
-            </div>
-          </div>
-        </Link>
+      <h1 className="text-3xl font-bold mt-8 mb-6">My Learning Dashboard</h1>
 
-        <Link href="/courses/science" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
-          <h2 className="text-xl font-semibold mb-4">Science</h2>
-          <p className="text-gray-600 mb-4">Explore scientific concepts with interactive experiments</p>
-          <div className="relative pt-1">
-            <div className="flex mb-2 items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-purple-600 bg-purple-200">
-                  Progress
-                </span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {courses.map((course) => (
+          <Link href={`/courses/${course.id}`} key={course.id}>
+            <Card className="p-6 h-full hover:shadow-lg transition-shadow cursor-pointer">
+              <h2 className="text-xl font-bold mb-2">{course.title}</h2>
+              <p className="text-gray-600 mb-4">{course.description}</p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>PROGRESS</span>
+                  <span>{course.progress}%</span>
+                </div>
+                <Progress 
+                  value={course.progress} 
+                  className="h-2"
+                  indicatorClassName={course.color}
+                />
               </div>
-              <div className="text-right">
-                <span className="text-xs font-semibold inline-block text-purple-600">
-                  25%
-                </span>
-              </div>
-            </div>
-            <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-purple-200">
-              <div style={{ width: "25%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-purple-500"></div>
-            </div>
-          </div>
-        </Link>
+            </Card>
+          </Link>
+        ))}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-        <Link href="/Chat" className="bg-pink-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
-          <h3 className="text-lg font-semibold mb-2">AI Chat Assistant</h3>
-          <p className="text-sm text-gray-600">Get help with your studies</p>
-        </Link>
-
-        <Link href="/Leaderboard" className="bg-yellow-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
-          <h3 className="text-lg font-semibold mb-2">Leaderboard</h3>
-          <p className="text-sm text-gray-600">See where you rank</p>
-        </Link>
-
-        <Link href="/achievements" className="bg-green-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
-          <h3 className="text-lg font-semibold mb-2">Achievements</h3>
-          <p className="text-sm text-gray-600">View your badges</p>
-        </Link>
-
-        <Link href="/Imagen" className="bg-blue-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
-          <h3 className="text-lg font-semibold mb-2">Image Generator</h3>
-          <p className="text-sm text-gray-600">Create learning visuals</p>
-        </Link>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {features.map((feature) => (
+          <Link href={feature.href} key={feature.title}>
+            <Card className={`p-6 h-full hover:shadow-lg transition-shadow cursor-pointer ${feature.color}`}>
+              <h3 className="font-semibold mb-2">{feature.title}</h3>
+              <p className="text-gray-600">{feature.description}</p>
+            </Card>
+          </Link>
+        ))}
       </div>
     </div>
   );

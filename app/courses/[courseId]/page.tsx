@@ -17,6 +17,13 @@ interface Question {
   correctOption: string;
 }
 
+interface QuizResult {
+  score: number;
+  points: number;
+  totalPoints: number;
+  newAchievements: string[];
+}
+
 export default function CoursePage({ params }: { params: { courseId: string } }) {
   const router = useRouter();
   const { user, isLoaded } = useUser();
@@ -28,6 +35,8 @@ export default function CoursePage({ params }: { params: { courseId: string } })
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -111,18 +120,48 @@ export default function CoursePage({ params }: { params: { courseId: string } })
       setSelectedOption(null);
     } else {
       try {
-        // Record the quiz attempt
-        if (user) {
-          await recordQuizAttempt(
-            user.id,
-            params.courseId,
-            score + (selectedOption === currentQuestion.correctOption ? 1 : 0),
-            totalQuestions
-          );
+        // Record the quiz attempt and get results
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+
+        const finalScore = score + (selectedOption === currentQuestion.correctOption ? 1 : 0);
+        
+        // Submit quiz results
+        const response = await fetch('/api/quiz/submit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            courseId: params.courseId,
+            score: finalScore,
+            total: totalQuestions
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to submit quiz');
+        }
+
+        const result = await response.json();
+        
+        // Update quiz result with points and achievements
+        setQuizResult({
+          score: finalScore,
+          points: result.points,
+          totalPoints: result.totalPoints,
+          newAchievements: result.newAchievements
+        });
+
+        // Show confetti for perfect score or new achievements
+        if (finalScore === totalQuestions || result.newAchievements.length > 0) {
+          setShowConfetti(true);
         }
       } catch (error) {
         console.error('Failed to record quiz attempt:', error);
-        // Continue to show results even if recording fails
+        setError('Failed to save quiz results. Please try again.');
+        return; // Don't proceed to show results if there was an error
       }
       setShowResults(true);
     }
@@ -162,25 +201,66 @@ export default function CoursePage({ params }: { params: { courseId: string } })
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-2xl mx-auto p-8 text-center">
+          {showConfetti && <Confetti />}
           <h1 className="text-3xl font-bold mb-6">Quiz Complete!</h1>
-          <p className="text-xl mb-4">
-            You scored {score} out of {totalQuestions}
-          </p>
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">
-              Congratulations! You earned a {medal.type} Medal!
-            </h2>
-            <div className="relative w-32 h-32 mx-auto">
-              <Image src={medal.icon} alt={`${medal.type} Medal`} fill className="object-contain" />
+          
+          <div className="mb-8 p-6 bg-blue-50 rounded-lg">
+            <p className="text-xl mb-4">
+              You scored {score} out of {totalQuestions}
+            </p>
+            
+            {quizResult && (
+              <div className="space-y-4">
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-blue-600">
+                    +{quizResult.points} Points
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Total Points: {quizResult.totalPoints}
+                  </p>
+                </div>
+
+                {quizResult.newAchievements.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-xl font-semibold mb-4">🎉 New Achievements!</h3>
+                    <div className="flex flex-wrap justify-center gap-3">
+                      {quizResult.newAchievements.map((achievement, index) => (
+                        <div
+                          key={index}
+                          className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium"
+                        >
+                          {achievement}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-8">
+              <Image
+                src={medal.icon}
+                alt={`${medal.type} Medal`}
+                width={80}
+                height={80}
+                className="mx-auto mb-4"
+              />
+              <p className="text-lg font-semibold">
+                You earned a {medal.type} Medal!
+              </p>
             </div>
           </div>
-          <Button onClick={handleRestart} className="mt-4">
-            Try Again
-          </Button>
-          <Button onClick={() => router.push("/dashboard")} className="mt-4 ml-4">
-            Back to Dashboard
-          </Button>
-          <Confetti />
+
+          <div className="flex justify-center gap-4">
+            <Button onClick={handleRestart}>Try Again</Button>
+            <Button 
+              variant="outline"
+              onClick={() => router.push("/dashboard")}
+            >
+              Back to Dashboard
+            </Button>
+          </div>
         </Card>
       </div>
     );
