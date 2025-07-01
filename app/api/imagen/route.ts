@@ -14,19 +14,30 @@ export async function POST(req: Request) {
       return new NextResponse("Missing prompt", { status: 400 });
     }
 
-    // TODO: Replace with actual image generation API integration
-    // For now, return a mock image URL
-    const mockImages = [
-      "https://placehold.co/600x400/e2e8f0/1e293b?text=Generated+Learning+Visual",
-      "https://placehold.co/600x400/f1f5f9/1e293b?text=Educational+Diagram",
-      "https://placehold.co/600x400/f8fafc/1e293b?text=Learning+Visualization"
-    ];
-
-    const randomImage = mockImages[Math.floor(Math.random() * mockImages.length)];
-
-    return NextResponse.json({
-      imageUrl: randomImage
+    const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.STABLE_DIFFUSION_API_KEY}`,
+      },
+      body: JSON.stringify({
+        text_prompts: [{ text: prompt }],
+        cfg_scale: 7,
+        height: 1024,
+        width: 1024,
+        steps: 30,
+        samples: 1,
+      }),
     });
+
+    if (!response.ok) {
+      throw new Error(`Stable Diffusion API error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    const imageUrl = `data:image/png;base64,${result.artifacts[0].base64}`;
+
+    return NextResponse.json({ imageUrl });
 
   } catch (error) {
     console.error('[IMAGE_GENERATION_ERROR]', error);

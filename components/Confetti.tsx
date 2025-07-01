@@ -1,25 +1,28 @@
 // @ts-nocheck
 import { useCallback, useEffect, useRef } from 'react';
-
 import ReactCanvasConfetti from 'react-canvas-confetti';
+import type { CreateTypes } from 'canvas-confetti';
 
-export default function Confetti() {
-  const refAnimationInstance = useRef(null);
+interface ConfettiProps {
+  onComplete?: () => void;
+}
 
-  const getInstance = useCallback(instance => {
+export default function Confetti({ onComplete }: ConfettiProps) {
+  const refAnimationInstance = useRef<CreateTypes | null>(null);
+
+  const getInstance = useCallback((instance: CreateTypes | null) => {
     refAnimationInstance.current = instance;
   }, []);
 
-  const makeShot = useCallback((particleRatio, opts) => {
-    refAnimationInstance.current &&
+  const makeShot = useCallback((particleRatio: number, opts: object) => {
+    if (refAnimationInstance.current) {
       refAnimationInstance.current({
         ...opts,
         origin: { y: 0.7 },
         particleCount: Math.floor(200 * particleRatio)
       });
+    }
   }, []);
-
-  useEffect(() => fire(), []);
 
   const fire = useCallback(() => {
     makeShot(0.25, {
@@ -48,7 +51,15 @@ export default function Confetti() {
       spread: 120,
       startVelocity: 45
     });
-  }, [makeShot]);
+
+    if (onComplete) {
+      setTimeout(onComplete, 2000);
+    }
+  }, [makeShot, onComplete]);
+
+  useEffect(() => {
+    fire();
+  }, [fire]);
 
   return (
     <ReactCanvasConfetti
@@ -59,7 +70,8 @@ export default function Confetti() {
         width: '100%',
         height: '100%',
         top: 0,
-        left: 0
+        left: 0,
+        zIndex: 50
       }}
     />
   );

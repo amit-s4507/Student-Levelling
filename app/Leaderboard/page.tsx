@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { auth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 
 interface LeaderboardEntry {
@@ -87,22 +87,20 @@ const dummyData: LeaderboardEntry[] = [
 ];
 
 export default function LeaderboardPage() {
-    const { userId } = auth();
-
-    if (!userId) {
-        redirect("/");
-    }
-
+    const { userId } = useAuth();
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        if (!userId) {
+            redirect("/");
+        }
         // Simulate API call
         setTimeout(() => {
             setLeaderboard(dummyData);
             setIsLoading(false);
         }, 1000);
-    }, []);
+    }, [userId]);
 
     const getRankStyle = (rank: number) => {
         switch (rank) {

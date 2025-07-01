@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 import { headers } from 'next/headers';
+import Link from 'next/link';
 
 export default async function DashboardPage() {
   const headersList = headers();
@@ -15,7 +16,7 @@ export default async function DashboardPage() {
       <h1 className="text-3xl font-bold mb-8">My Learning Dashboard</h1>
       
       <div className="grid gap-6 md:grid-cols-3">
-        <div className="bg-white rounded-lg shadow p-6">
+        <Link href="/courses/programming" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold mb-4">Programming Fundamentals</h2>
           <p className="text-gray-600 mb-4">Learn the basics of programming with interactive lessons</p>
           <div className="relative pt-1">
@@ -35,9 +36,9 @@ export default async function DashboardPage() {
               <div style={{ width: "33%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"></div>
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <Link href="/courses/math" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold mb-4">Mathematics</h2>
           <p className="text-gray-600 mb-4">Master mathematical concepts through gamified learning</p>
           <div className="relative pt-1">
@@ -57,9 +58,9 @@ export default async function DashboardPage() {
               <div style={{ width: "50%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500"></div>
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <Link href="/courses/science" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold mb-4">Science</h2>
           <p className="text-gray-600 mb-4">Explore scientific concepts with interactive experiments</p>
           <div className="relative pt-1">
@@ -79,29 +80,29 @@ export default async function DashboardPage() {
               <div style={{ width: "25%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-purple-500"></div>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-        <a href="/chat" className="bg-pink-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <Link href="/Chat" className="bg-pink-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
           <h3 className="text-lg font-semibold mb-2">AI Chat Assistant</h3>
           <p className="text-sm text-gray-600">Get help with your studies</p>
-        </a>
+        </Link>
 
-        <a href="/leaderboard" className="bg-yellow-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <Link href="/Leaderboard" className="bg-yellow-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
           <h3 className="text-lg font-semibold mb-2">Leaderboard</h3>
           <p className="text-sm text-gray-600">See where you rank</p>
-        </a>
+        </Link>
 
-        <a href="/achievements" className="bg-green-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <Link href="/achievements" className="bg-green-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
           <h3 className="text-lg font-semibold mb-2">Achievements</h3>
           <p className="text-sm text-gray-600">View your badges</p>
-        </a>
+        </Link>
 
-        <a href="/imagen" className="bg-blue-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <Link href="/Imagen" className="bg-blue-50 p-6 rounded-lg shadow hover:shadow-md transition-shadow">
           <h3 className="text-lg font-semibold mb-2">Image Generator</h3>
           <p className="text-sm text-gray-600">Create learning visuals</p>
-        </a>
+        </Link>
       </div>
     </div>
   );

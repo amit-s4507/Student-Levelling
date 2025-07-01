@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from '@clerk/nextjs';
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// Initialize Google Generative AI with your API key
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
 
 export async function POST(req: Request) {
   try {
@@ -16,21 +18,15 @@ export async function POST(req: Request) {
       return new NextResponse("Missing prompt", { status: 400 });
     }
 
-    // TODO: Replace with actual AI model integration
-    // For now, return a mock response
-    const mockResponses = [
-      "That's a great question about mathematics! Let me help you understand the concept better...",
-      "When it comes to programming, the key concept you're asking about works like this...",
-      "In science, this phenomenon can be explained by...",
-      "Here's a step-by-step approach to solve this problem...",
-      "Let me break down this concept into simpler terms..."
-    ];
+    // Initialize the model
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-    const randomResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
+    // Generate content
+    const result = await model.generateContent(userPrompt);
+    const response = await result.response;
+    const text = response.text();
 
-    return NextResponse.json({
-      text: randomResponse + "\n\nNote: This is a mock response. The actual AI integration will provide more detailed and accurate answers."
-    });
+    return NextResponse.json({ text });
 
   } catch (error) {
     console.error('[CHAT_ERROR]', error);
