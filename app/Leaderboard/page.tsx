@@ -10,97 +10,45 @@ interface LeaderboardEntry {
     name: string;
     score: number;
     level: string;
-    recentAchievement: string;
+    recentAchievement?: string;
+    userId: string;
 }
-
-const dummyData: LeaderboardEntry[] = [
-    {
-        rank: 1,
-        name: "Alex Thompson",
-        score: 2500,
-        level: "Master",
-        recentAchievement: "Completed Advanced Mathematics"
-    },
-    {
-        rank: 2,
-        name: "Sarah Chen",
-        score: 2350,
-        level: "Expert",
-        recentAchievement: "Perfect Score in Programming"
-    },
-    {
-        rank: 3,
-        name: "Michael Rodriguez",
-        score: 2200,
-        level: "Expert",
-        recentAchievement: "Science Explorer Badge"
-    },
-    {
-        rank: 4,
-        name: "Emily Johnson",
-        score: 2100,
-        level: "Advanced",
-        recentAchievement: "7-Day Study Streak"
-    },
-    {
-        rank: 5,
-        name: "David Kim",
-        score: 2000,
-        level: "Advanced",
-        recentAchievement: "Math Whiz Badge"
-    },
-    {
-        rank: 6,
-        name: "Lisa Patel",
-        score: 1900,
-        level: "Intermediate",
-        recentAchievement: "Quick Starter Badge"
-    },
-    {
-        rank: 7,
-        name: "James Wilson",
-        score: 1800,
-        level: "Intermediate",
-        recentAchievement: "Completed Basic Programming"
-    },
-    {
-        rank: 8,
-        name: "Anna Martinez",
-        score: 1700,
-        level: "Intermediate",
-        recentAchievement: "Science Quiz Master"
-    },
-    {
-        rank: 9,
-        name: "Ryan Taylor",
-        score: 1600,
-        level: "Beginner",
-        recentAchievement: "First Perfect Score"
-    },
-    {
-        rank: 10,
-        name: "Sophie Anderson",
-        score: 1500,
-        level: "Beginner",
-        recentAchievement: "Started Learning Journey"
-    }
-];
 
 export default function LeaderboardPage() {
     const { userId } = useAuth();
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [timeframe, setTimeframe] = useState<'all' | 'weekly' | 'monthly'>('all');
 
     useEffect(() => {
         if (!userId) {
             redirect("/");
         }
-        // Simulate API call
-        setTimeout(() => {
-            setLeaderboard(dummyData);
+        fetchLeaderboard();
+    }, [userId, timeframe]);
+
+    const fetchLeaderboard = async () => {
+        try {
+            const response = await fetch(`/api/leaderboard?timeframe=${timeframe}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch leaderboard');
+            }
+            const data = await response.json();
+            setLeaderboard(data);
+        } catch (error) {
+            console.error('Error fetching leaderboard:', error);
+        } finally {
             setIsLoading(false);
-        }, 1000);
-    }, [userId]);
+        }
+    };
+
+    const getLevel = (score: number): string => {
+        if (score >= 2000) return "Master";
+        if (score >= 1500) return "Expert";
+        if (score >= 1000) return "Advanced";
+        if (score >= 500) return "Intermediate";
+        return "Beginner";
+    };
 
     const getRankStyle = (rank: number) => {
         switch (rank) {
@@ -132,7 +80,29 @@ export default function LeaderboardPage() {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-8">Student Leaderboard</h1>
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold">Student Leaderboard</h1>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setTimeframe('all')}
+                        className={`px-4 py-2 rounded ${timeframe === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                    >
+                        All Time
+                    </button>
+                    <button
+                        onClick={() => setTimeframe('monthly')}
+                        className={`px-4 py-2 rounded ${timeframe === 'monthly' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                    >
+                        Monthly
+                    </button>
+                    <button
+                        onClick={() => setTimeframe('weekly')}
+                        className={`px-4 py-2 rounded ${timeframe === 'weekly' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                    >
+                        Weekly
+                    </button>
+                </div>
+            </div>
 
             {isLoading ? (
                 <div className="flex justify-center items-center h-64">
@@ -142,7 +112,7 @@ export default function LeaderboardPage() {
                 <div className="grid gap-4">
                     {leaderboard.map((entry) => (
                         <Card
-                            key={entry.rank}
+                            key={entry.userId}
                             className={`p-6 border-l-4 ${getRankStyle(entry.rank)} transition-transform hover:scale-[1.01]`}
                         >
                             <div className="flex items-center justify-between">
@@ -150,8 +120,8 @@ export default function LeaderboardPage() {
                                     <div className="text-2xl font-bold w-8">#{entry.rank}</div>
                                     <div>
                                         <h3 className="text-lg font-semibold">{entry.name}</h3>
-                                        <p className={`text-sm font-medium ${getLevelColor(entry.level)}`}>
-                                            {entry.level}
+                                        <p className={`text-sm font-medium ${getLevelColor(entry.level || getLevel(entry.score))}`}>
+                                            {entry.level || getLevel(entry.score)}
                                         </p>
                                     </div>
                                 </div>
@@ -160,11 +130,13 @@ export default function LeaderboardPage() {
                                     <p className="text-sm text-gray-500">points</p>
                                 </div>
                             </div>
-                            <div className="mt-4">
-                                <p className="text-sm text-gray-600">
-                                    Recent Achievement: {entry.recentAchievement}
-                                </p>
-                            </div>
+                            {entry.recentAchievement && (
+                                <div className="mt-4">
+                                    <p className="text-sm text-gray-600">
+                                        Recent Achievement: {entry.recentAchievement}
+                                    </p>
+                                </div>
+                            )}
                         </Card>
                     ))}
                 </div>
