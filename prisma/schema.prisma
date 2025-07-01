@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  name          String?
+  email         String?       @unique
+  points        Int           @default(0)
+  level         String        @default("Beginner")
+  achievements  Achievement[]
+  quizAttempts  QuizAttempt[]
+  studyStreak   Int           @default(0)
+  lastStudyDate DateTime?
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  userId      String
+  type        String   // e.g., "Quick Starter", "Math Whiz", etc.
+  progress    Int      @default(0)
+  maxProgress Int
+  completed   Boolean  @default(false)
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, type])
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+  courseId  String   // e.g., "math", "programming", "science"
+  score     Int
+  total     Int
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, courseId])
+}
+
+// Store dynamically generated questions
+model QuizQuestion {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  courseId      String
+  question      String
+  options       String[] // Array of possible answers
+  correctOption String
+  difficulty    Int      @default(1) // 1-5 scale
+
+  @@index([courseId])
+} 

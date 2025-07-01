@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from '@clerk/nextjs';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from 'openai';
 
-// Initialize Google Generative AI with your API key
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// Prepare the chat context
+const context = `You are an AI tutor helping students learn various subjects. You should:
+1. Provide clear, concise explanations
+2. Use examples when helpful
+3. Break down complex topics into simpler parts
+4. Encourage critical thinking
+5. Be patient and supportive`;
 
 export async function POST(req: Request) {
   try {
@@ -18,18 +27,20 @@ export async function POST(req: Request) {
       return new NextResponse("Missing prompt", { status: 400 });
     }
 
-    // Initialize the model
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: context },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 1000
+    });
 
-    // Generate content
-    const result = await model.generateContent(userPrompt);
-    const response = await result.response;
-    const text = response.text();
-
+    const text = completion.choices[0]?.message?.content || "No response generated";
     return NextResponse.json({ text });
 
   } catch (error) {
     console.error('[CHAT_ERROR]', error);
-    return new NextResponse("Internal Error", { status: 500 });
+    return new NextResponse(error instanceof Error ? error.message : "Internal Error", { status: 500 });
   }
 }

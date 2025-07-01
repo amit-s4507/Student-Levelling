@@ -1,134 +1,113 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { getUserProgress } from '@/lib/quiz-service';
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import Image from 'next/image';
+import Image from "next/image";
 
 interface Achievement {
   id: string;
-  title: string;
-  description: string;
+  type: string;
   progress: number;
   maxProgress: number;
-  icon: string;
-  unlocked: boolean;
+  completed: boolean;
 }
 
-const dummyAchievements: Achievement[] = [
-  {
-    id: "quick-starter",
-    title: "Quick Starter",
-    description: "Complete your first lesson",
-    progress: 1,
-    maxProgress: 1,
-    icon: "/icons/bronzemedal.svg",
-    unlocked: true
-  },
-  {
-    id: "math-whiz",
-    title: "Math Whiz",
-    description: "Score 100% in 3 math quizzes",
-    progress: 2,
-    maxProgress: 3,
-    icon: "/icons/silvermedal.svg",
-    unlocked: false
-  },
-  {
-    id: "coding-master",
-    title: "Coding Master",
-    description: "Complete all programming fundamentals",
-    progress: 8,
-    maxProgress: 10,
-    icon: "/icons/goldmedal.svg",
-    unlocked: false
-  },
-  {
-    id: "science-explorer",
-    title: "Science Explorer",
-    description: "Complete 5 science experiments",
-    progress: 3,
-    maxProgress: 5,
-    icon: "/icons/bronzemedal.svg",
-    unlocked: false
-  },
-  {
-    id: "study-streak",
-    title: "Study Streak",
-    description: "Study for 7 consecutive days",
-    progress: 5,
-    maxProgress: 7,
-    icon: "/icons/silvermedal.svg",
-    unlocked: false
-  },
-  {
-    id: "perfect-score",
-    title: "Perfect Score",
-    description: "Get 100% in any quiz",
-    progress: 1,
-    maxProgress: 1,
-    icon: "/icons/goldmedal.svg",
-    unlocked: true
-  }
-];
+interface UserProgress {
+  achievements: Achievement[];
+  points: number;
+  level: string;
+}
 
 export default function AchievementsPage() {
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useUser();
+  const [progress, setProgress] = useState<UserProgress | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setAchievements(dummyAchievements);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+    const loadProgress = async () => {
+      if (!user) return;
+
+      try {
+        const data = await getUserProgress(user.id);
+        setProgress(data);
+      } catch (error) {
+        console.error('Failed to load progress:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProgress();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8">Your Achievements</h1>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="bg-gray-200 h-48 rounded-lg"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!progress) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8">Your Achievements</h1>
+        <Card className="p-6 text-center">
+          <p>Please sign in to view your achievements.</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Your Achievements</h1>
-
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Your Achievements</h1>
+        <div className="text-right">
+          <span className="text-2xl font-bold">{progress.points}</span>
+          <span className="text-sm text-gray-600 block">Total Points</span>
+          <span className="text-blue-600">{progress.level}</span>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {achievements.map((achievement) => (
-            <Card
-              key={achievement.id}
-              className={`p-6 ${
-                achievement.unlocked
-                  ? "bg-green-50 border-green-200"
-                  : "bg-gray-50 border-gray-200"
-              }`}
-            >
-              <div className="flex items-start space-x-4">
-                <div className="relative w-12 h-12">
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {progress.achievements.map((achievement) => {
+          const progressPercent = (achievement.progress / achievement.maxProgress) * 100;
+          const bgColor = achievement.completed ? "bg-green-50" : "bg-white";
+
+          return (
+            <Card key={achievement.id} className={`p-6 ${bgColor}`}>
+              <div className="flex items-center mb-4">
+                <div className="relative w-12 h-12 mr-4">
                   <Image
-                    src={achievement.icon}
-                    alt={achievement.title}
+                    src={achievement.completed ? "/icons/goldmedal.svg" : "/icons/silvermedal.svg"}
+                    alt={achievement.type}
                     fill
-                    className={achievement.unlocked ? "opacity-100" : "opacity-50"}
+                    className="object-contain"
                   />
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-1">{achievement.title}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{achievement.description}</p>
-                  <div className="space-y-2">
-                    <Progress
-                      value={(achievement.progress / achievement.maxProgress) * 100}
-                    />
-                    <p className="text-sm text-gray-500">
-                      Progress: {achievement.progress}/{achievement.maxProgress}
-                    </p>
-                  </div>
+                <div>
+                  <h2 className="text-xl font-semibold">{achievement.type}</h2>
+                  <p className="text-sm text-gray-600">
+                    Progress: {achievement.progress}/{achievement.maxProgress}
+                  </p>
                 </div>
               </div>
+              <Progress value={progressPercent} className="h-2" />
             </Card>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 } 

@@ -1,56 +1,104 @@
 "use client";
 
-import { useState } from 'react';
-import { auth } from "@clerk/nextjs";
-import { redirect, useRouter } from "next/navigation";
-import { data as programmingData } from '@/data/programming.d';
-import { data as mathData } from '@/data/math.d';
-import { data as scienceData } from '@/data/science.d';
+import { useState, useEffect } from 'react';
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Image from "next/image";
 import Confetti from "@/components/Confetti";
+import { generateQuizQuestions, recordQuizAttempt } from '@/lib/quiz-service';
 
-interface CourseData {
-  title: string;
-  description: string;
-  questions: {
-    question: string;
-    options: string[];
-    correctOption: string;
-  }[];
+interface Question {
+  id: string;
+  question: string;
+  options: string[];
+  correctOption: string;
 }
-
-const courseDataMap: { [key: string]: CourseData } = {
-  'programming': programmingData,
-  'math': mathData,
-  'science': scienceData,
-};
 
 export default function CoursePage({ params }: { params: { courseId: string } }) {
   const router = useRouter();
+  const { user, isLoaded } = useUser();
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const courseData = courseDataMap[params.courseId];
+  useEffect(() => {
+    if (!isLoaded) return;
 
-  if (!courseData) {
-    router.push("/dashboard");
-    return null;
+    if (!user) {
+      router.push("/sign-in");
+      return;
+    }
+
+    const loadQuestions = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const newQuestions = await generateQuizQuestions(params.courseId);
+        if (!newQuestions || newQuestions.length === 0) {
+          throw new Error('No questions available for this course');
+        }
+        setQuestions(newQuestions);
+      } catch (error) {
+        console.error('Failed to load questions:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load questions');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQuestions();
+  }, [params.courseId, router, user, isLoaded]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="max-w-2xl mx-auto p-8 text-center">
+          <h1 className="text-2xl font-bold mb-4">Loading Quiz...</h1>
+          <Progress value={100} className="w-full" />
+        </Card>
+      </div>
+    );
   }
 
-  const currentQuestion = courseData.questions[currentQuestionIndex];
-  const totalQuestions = courseData.questions.length;
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="max-w-2xl mx-auto p-8 text-center">
+          <h1 className="text-2xl font-bold mb-4 text-red-600">Error</h1>
+          <p className="mb-4">{error}</p>
+          <Button onClick={() => router.push("/dashboard")}>Back to Dashboard</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="max-w-2xl mx-auto p-8 text-center">
+          <h1 className="text-2xl font-bold mb-4">No questions available</h1>
+          <Button onClick={() => router.push("/dashboard")}>Back to Dashboard</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  const currentQuestion = questions[currentQuestionIndex];
+  const totalQuestions = questions.length;
 
   const handleOptionSelect = (option: string) => {
     setSelectedOption(option);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (selectedOption === currentQuestion.correctOption) {
       setScore(score + 1);
     }
@@ -62,16 +110,44 @@ export default function CoursePage({ params }: { params: { courseId: string } })
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedOption(null);
     } else {
+      try {
+        // Record the quiz attempt
+        if (user) {
+          await recordQuizAttempt(
+            user.id,
+            params.courseId,
+            score + (selectedOption === currentQuestion.correctOption ? 1 : 0),
+            totalQuestions
+          );
+        }
+      } catch (error) {
+        console.error('Failed to record quiz attempt:', error);
+        // Continue to show results even if recording fails
+      }
       setShowResults(true);
     }
   };
 
-  const handleRestart = () => {
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setSelectedOption(null);
-    setShowResults(false);
-    setProgress(0);
+  const handleRestart = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const newQuestions = await generateQuizQuestions(params.courseId);
+      if (!newQuestions || newQuestions.length === 0) {
+        throw new Error('No questions available for this course');
+      }
+      setQuestions(newQuestions);
+      setCurrentQuestionIndex(0);
+      setScore(0);
+      setSelectedOption(null);
+      setShowResults(false);
+      setProgress(0);
+    } catch (error) {
+      console.error('Failed to load new questions:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load new questions');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getMedal = () => {
@@ -112,8 +188,10 @@ export default function CoursePage({ params }: { params: { courseId: string } })
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">{courseData.title}</h1>
-      <p className="text-gray-600 mb-4">{courseData.description}</p>
+      <h1 className="text-3xl font-bold mb-2">
+        {params.courseId.charAt(0).toUpperCase() + params.courseId.slice(1)} Quiz
+      </h1>
+      <p className="text-gray-600 mb-4">Test your knowledge and earn achievements!</p>
 
       <div className="mb-8">
         <Progress value={progress} className="h-2" />
