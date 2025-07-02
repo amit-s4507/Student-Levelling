@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
@@ -16,15 +16,16 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Something went wrong!</h2>
-        <p className="text-gray-600 mb-8">
-          Don't worry, we've been notified and are working on it.
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      <div className="text-center space-y-4">
+        <h2 className="text-2xl font-bold text-red-600">Something went wrong!</h2>
+        <p className="text-gray-600">
+          Don&apos;t worry, it&apos;s not your fault. We&apos;re working on it!
         </p>
         <Button
           onClick={reset}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          variant="outline"
+          className="mt-4"
         >
           Try again
         </Button>
