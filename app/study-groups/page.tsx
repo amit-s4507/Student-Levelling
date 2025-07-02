@@ -20,6 +20,10 @@ interface StudyGroup {
     name: string;
     image: string;
   };
+  schedule: {
+    day: string;
+    time: string;
+  };
 }
 
 interface CreateGroupModalProps {
@@ -45,6 +49,10 @@ function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModalProps) 
       creator: {
         name: user?.fullName || 'Anonymous',
         image: user?.imageUrl || '/default-avatar.png'
+      },
+      schedule: {
+        day: '',
+        time: ''
       }
     });
     setName('');
@@ -109,7 +117,7 @@ function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModalProps) 
 export default function StudyGroups() {
   const { user } = useUser();
   const [groups, setGroups] = useState<StudyGroup[]>([]);
-  const [filteredGroups, setFilteredGroups] = useState<StudyGroup[]>([]);
+  const [displayGroups, setDisplayGroups] = useState<StudyGroup[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'my-groups'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -122,6 +130,10 @@ export default function StudyGroups() {
       topic: 'Programming',
       members: 15,
       isLive: true,
+      creator: {
+        name: 'John Doe',
+        image: '/default-avatar.png'
+      },
       schedule: {
         day: 'Monday',
         time: '18:00'
@@ -134,6 +146,10 @@ export default function StudyGroups() {
       topic: 'Mathematics',
       members: 8,
       isLive: false,
+      creator: {
+        name: 'Jane Smith',
+        image: '/default-avatar.png'
+      },
       schedule: {
         day: 'Wednesday',
         time: '17:00'
@@ -143,17 +159,23 @@ export default function StudyGroups() {
 
   useEffect(() => {
     setGroups(mockGroups);
-    setFilteredGroups(mockGroups);
+    setDisplayGroups(mockGroups);
   }, [mockGroups]);
 
-  const handleCreateGroup = (newGroup: Omit<StudyGroup, 'id' | 'members' | 'isLive'>) => {
+  const handleCreateGroup = (newGroup: Omit<StudyGroup, 'id' | 'members' | 'isLive' | 'creator'>) => {
     const group: StudyGroup = {
       ...newGroup,
       id: Date.now().toString(),
       members: 1,
-      isLive: false
+      isLive: false,
+      creator: {
+        name: user?.fullName || 'Anonymous',
+        image: user?.imageUrl || '/default-avatar.png'
+      }
     };
-    setGroups([...groups, group]);
+    const updatedGroups = [...groups, group];
+    setGroups(updatedGroups);
+    setDisplayGroups(updatedGroups);
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,12 +186,12 @@ export default function StudyGroups() {
       group.topic.toLowerCase().includes(term.toLowerCase()) ||
       group.description.toLowerCase().includes(term.toLowerCase())
     );
-    setFilteredGroups(filtered);
+    setDisplayGroups(filtered);
   };
 
-  const filteredGroups = activeTab === 'my-groups'
-    ? groups.filter(group => group.creator.name === user?.fullName)
-    : filteredGroups;
+  const displayedGroups = activeTab === 'my-groups'
+    ? groups.filter(group => group.creator?.name === user?.fullName)
+    : displayGroups;
 
   return (
     <div className="min-h-screen p-8 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
@@ -209,7 +231,7 @@ export default function StudyGroups() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredGroups.map((group, index) => (
+          {displayedGroups.map((group, index) => (
             <motion.div
               key={group.id}
               initial={{ opacity: 0, y: 20 }}
