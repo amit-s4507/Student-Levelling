@@ -36,8 +36,29 @@ export default function LeaderboardPage() {
             }
         };
 
+        // Initialize user data
+        const initUser = async () => {
+            try {
+                await fetch('/api/user/init', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+            } catch (error) {
+                console.error('Error initializing user:', error);
+            }
+        };
+
+        if (user) {
+            initUser();
+        }
+
         fetchLeaderboard();
-    }, [timeframe]);
+        // Poll for updates every 5 seconds
+        const interval = setInterval(fetchLeaderboard, 5000);
+        return () => clearInterval(interval);
+    }, [timeframe, user]);
 
     const getMedalIcon = (rank: number) => {
         switch (rank) {

@@ -4,7 +4,7 @@ import { auth, currentUser } from '@clerk/nextjs';
 
 const prisma = new PrismaClient();
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const { userId } = auth();
     const user = await currentUser();

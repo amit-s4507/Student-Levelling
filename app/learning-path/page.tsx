@@ -26,7 +26,7 @@ export default function LearningPath() {
   const [loading, setLoading] = useState(true);
 
   // Move recommendedPaths to useMemo
-  const recommendedPaths = useMemo(() => [
+  const recommendedPaths = useMemo<LearningPath[]>(() => [
     {
       id: 'web-dev',
       title: 'Full-Stack Web Development',
@@ -78,7 +78,7 @@ export default function LearningPath() {
     };
 
     if (user) fetchPaths();
-  }, [user]);
+  }, [user, recommendedPaths]);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -200,7 +200,7 @@ export default function LearningPath() {
                       ⏱️ {path.estimatedHours} hours
                     </div>
                     <Button className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-                      {path.progress > 0 ? 'Continue Learning' : 'Start Learning'}
+                      Start Learning
                     </Button>
                   </div>
                 </Card>

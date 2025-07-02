@@ -82,7 +82,12 @@ export default function Dashboard() {
       }
     };
 
-    if (user) fetchStats();
+    if (user) {
+      fetchStats();
+      // Poll for updates every 5 seconds
+      const interval = setInterval(fetchStats, 5000);
+      return () => clearInterval(interval);
+    }
   }, [user]);
 
   const features = [

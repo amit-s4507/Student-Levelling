@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { auth } from '@clerk/nextjs';
+import { auth, currentUser } from '@clerk/nextjs';
 
 const prisma = new PrismaClient();
 
@@ -18,7 +18,24 @@ export async function POST(request: Request) {
       return new NextResponse('Invalid request data', { status: 400 });
     }
 
-    // Ensure user exists
+    // Get user details from Clerk
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return new NextResponse('User not found', { status: 404 });
+    }
+
+    // Get the best available name
+    const userName = clerkUser.firstName && clerkUser.lastName 
+      ? `${clerkUser.firstName} ${clerkUser.lastName}`
+      : clerkUser.firstName 
+      ? clerkUser.firstName
+      : clerkUser.username 
+      ? clerkUser.username
+      : clerkUser.emailAddresses[0]?.emailAddress?.split('@')[0] 
+      ? clerkUser.emailAddresses[0].emailAddress.split('@')[0]
+      : 'Student';
+
+    // Ensure user exists and update name if needed
     let user = await prisma.user.findUnique({
       where: { id: userId }
     });
@@ -28,7 +45,8 @@ export async function POST(request: Request) {
       user = await prisma.user.create({
         data: {
           id: userId,
-          name: 'Anonymous User',
+          name: userName,
+          email: clerkUser.emailAddresses[0]?.emailAddress,
           points: 0,
           level: 'Beginner',
           studyStreak: 0
@@ -47,7 +65,7 @@ export async function POST(request: Request) {
         achievementTypes.map(achievement =>
           prisma.achievement.create({
             data: {
-              userId: user.id,
+              userId,
               type: achievement.type,
               progress: 0,
               maxProgress: achievement.maxProgress,
@@ -56,6 +74,12 @@ export async function POST(request: Request) {
           })
         )
       );
+    } else if (user.name !== userName) {
+      // Update name if it has changed
+      user = await prisma.user.update({
+        where: { id: userId },
+        data: { name: userName }
+      });
     }
 
     // Record the quiz attempt
@@ -78,7 +102,8 @@ export async function POST(request: Request) {
         }
       },
       select: {
-        points: true
+        points: true,
+        name: true
       }
     });
 
@@ -182,6 +207,7 @@ export async function POST(request: Request) {
       score,
       points: pointsEarned,
       totalPoints: updatedUser.points,
+      name: updatedUser.name,
       newAchievements
     });
   } catch (error) {

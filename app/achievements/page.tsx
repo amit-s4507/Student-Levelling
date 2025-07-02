@@ -43,6 +43,9 @@ export default function AchievementsPage() {
     };
 
     fetchAchievements();
+    // Poll for updates every 5 seconds
+    const interval = setInterval(fetchAchievements, 5000);
+    return () => clearInterval(interval);
   }, [user, isLoaded, router]);
 
   const getAchievementIcon = (type: string) => {
