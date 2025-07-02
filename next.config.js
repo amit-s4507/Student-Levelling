@@ -18,7 +18,14 @@ const nextConfig = {
     },
     experimental: {
         serverComponentsExternalPackages: ['@prisma/client']
-    }
+    },
+    typescript: {
+        ignoreBuildErrors: false
+    },
+    eslint: {
+        ignoreDuringBuilds: false
+    },
+    swcMinify: true
 }
 
 // Export the config with a port override
