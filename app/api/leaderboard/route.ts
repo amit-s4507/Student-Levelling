@@ -11,6 +11,9 @@ export async function GET(request: Request) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+
+    // search params 
+    
     const { searchParams } = new URL(request.url);
     const timeframe = searchParams.get('timeframe') || 'all';
 
