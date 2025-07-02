@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { auth } from '@clerk/nextjs';
+import { auth } from '@clerk/nextjs/server';
+import { prisma } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
-
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = auth();
     if (!userId) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get user data including quiz attempts and achievements
@@ -32,14 +30,22 @@ export async function GET() {
       return new NextResponse('User not found', { status: 404 });
     }
 
-    // Calculate level based on points
-    const level = calculateLevel(user.points);
+    // Calculate course progress
+    const courseProgress: Record<string, number> = {};
+    const courses = ['programming', 'math', 'science'];
+
+    for (const course of courses) {
+      const attempts = user.quizAttempts.filter(a => a.courseId === course);
+      if (attempts.length > 0) {
+        const totalScore = attempts.reduce((sum, attempt) => sum + (attempt.score / attempt.total), 0);
+        courseProgress[course] = Math.round((totalScore / attempts.length) * 100);
+      } else {
+        courseProgress[course] = 0;
+      }
+    }
 
     // Calculate total quizzes taken
     const totalQuizzes = user.quizAttempts.length;
-
-    // Calculate course progress
-    const courseProgress = calculateCourseProgress(user.quizAttempts);
 
     // Format achievements
     const achievements = user.achievements.map(achievement => ({
@@ -56,6 +62,9 @@ export async function GET() {
       total: attempt.total,
       date: attempt.createdAt
     }));
+
+    // Calculate level based on points
+    const level = calculateLevel(user.points);
 
     return NextResponse.json({
       points: user.points,
@@ -80,22 +89,4 @@ function calculateLevel(points: number): string {
   if (points >= 1500) return "Advanced";
   if (points >= 500) return "Intermediate";
   return "Beginner";
-}
-
-function calculateCourseProgress(attempts: { courseId: string; score: number; total: number }[]): Record<string, number> {
-  const courses = ['programming', 'math', 'science'];
-  const progress: Record<string, number> = {};
-
-  for (const course of courses) {
-    const courseAttempts = attempts.filter(a => a.courseId === course);
-    if (courseAttempts.length > 0) {
-      // Calculate average score as a percentage
-      const totalScore = courseAttempts.reduce((sum, attempt) => sum + (attempt.score / attempt.total * 100), 0);
-      progress[course] = Math.round(totalScore / courseAttempts.length);
-    } else {
-      progress[course] = 0;
-    }
-  }
-
-  return progress;
 } 

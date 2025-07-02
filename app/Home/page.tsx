@@ -41,8 +41,8 @@ export default function Home() {
 
                     </div>
                     <div className={styles.wrapper}>
-                        <p className={`${styles.heroheading} ${styles.p}`}>
-                            GraphifyEd is a unique student learning management system which aims at making learning as addictive as gaming. Start your journey with GraphifyEd and earn points, badges and rewards as you learn.
+                        <p className="text-lg text-muted-foreground text-center max-w-3xl mx-auto mb-8">
+                            Student Levelling is a unique learning management system which aims at making learning as addictive as gaming. Start your journey with Student Levelling and earn points, badges and rewards as you learn.
                         </p>
                         <Link href="/Courses/html5">
                             <button className={styles.btnpink}>Select Logo and Learn</button>

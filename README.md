@@ -1,35 +1,34 @@
 # Student Levelling
 
-A modern, gamified learning platform built with Next.js that makes education engaging and fun.
+A modern, gamified learning management system built with Next.js 14 and TypeScript. The platform makes learning addictive by incorporating gaming elements like points, achievements, and leaderboards.
 
-## Features
+## 🚀 Features
 
-- 🎮 Gamified Learning Experience
-- 📚 Multiple Course Tracks (Programming, Math, Science)
-- 🏆 Achievement System
-- 📊 Progress Tracking
-- 🤖 AI-Powered Chat Assistant
-- 🎨 Image Generation Capabilities
-- 📈 Interactive Leaderboard
-- 🌓 Dark/Light Mode Support
+- **Interactive Learning Paths**: Structured courses with progressive difficulty
+- **Achievement System**: Unlock badges and rewards as you learn
+- **Real-time Leaderboard**: Compete with other learners
+- **Smart Quiz System**: Dynamic question generation and adaptive difficulty
+- **Study Groups**: Collaborative learning environment
+- **AI-Powered Chat**: Get instant help with your queries
+- **Progress Tracking**: Visual representation of your learning journey
+- **Dark/Light Theme**: Comfortable viewing experience
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- Next.js 15.3
-- React
-- TypeScript
-- Tailwind CSS
-- Clerk Authentication
-- Shadcn UI Components
-- OpenAI Integration
-- Rive Animations
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Framer Motion
+- **Backend**: Next.js API Routes, Prisma ORM
+- **Database**: PostgreSQL
+- **Authentication**: Clerk
+- **State Management**: React Hooks
+- **UI Components**: Radix UI, Shadcn
+- **Animations**: Framer Motion, Rive
+- **Development**: ESLint, Prettier
 
-## Getting Started
+## 📦 Installation
 
 1. Clone the repository:
 ```bash
 git clone https://github.com/yourusername/student-levelling.git
-cd student-levelling
 ```
 
 2. Install dependencies:
@@ -38,58 +37,95 @@ npm install
 ```
 
 3. Set up environment variables:
-Create a `.env.local` file in the root directory and add:
-```env
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-CLERK_SECRET_KEY=your_clerk_secret_key
-OPENAI_API_KEY=your_openai_api_key
+```bash
+cp .env.example .env.local
 ```
 
-4. Run the development server:
+4. Set up the database:
+```bash
+npx prisma migrate dev
+```
+
+5. Run the development server:
 ```bash
 npm run dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+## 🌐 Environment Variables
 
-## Project Structure
+Create a `.env.local` file with the following variables:
+
+```env
+DATABASE_URL="postgresql://..."
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+```
+
+## 🏗️ Project Structure
 
 ```
 student-levelling/
-├── app/                # Next.js app directory
-├── components/         # Reusable components
-├── data/              # Course content and static data
-├── public/            # Static assets
-├── styles/            # Global styles
-└── utils/             # Utility functions
+├── app/                  # Next.js 14 app directory
+├── components/          # Reusable UI components
+├── lib/                # Utility functions and services
+├── prisma/             # Database schema and migrations
+├── public/             # Static assets
+└── styles/             # Global styles and CSS modules
 ```
 
-## Features in Detail
-
-### Course Tracks
-- Programming fundamentals
-- Mathematics concepts
-- Science topics
+## 🧪 Key Features Implementation
 
 ### Achievement System
-- Progress tracking
-- Medals and rewards
+- Dynamic achievement tracking
+- Real-time progress updates
+- Custom badges and rewards
+
+### Quiz System
+- Adaptive difficulty
 - Performance analytics
+- Instant feedback
 
-### AI Integration
-- Intelligent chat assistance
-- Image generation capabilities
-- Personalized learning paths
+### Leaderboard
+- Real-time updates
+- Weekly/Monthly/All-time rankings
+- Achievement showcasing
 
-### User Interface
-- Responsive design
-- Dark/light mode
-- Animated interactions
+## 🔐 Security Features
 
-## Contributing
+- Authentication with Clerk
+- Protected API routes
+- Input validation
+- Rate limiting
+- Secure data handling
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## 🚀 Deployment
 
-## License
+The application is configured for easy deployment on Vercel:
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+1. Connect your GitHub repository to Vercel
+2. Configure environment variables
+3. Deploy!
+
+## 📈 Future Enhancements
+
+- Mobile application
+- Real-time collaboration features
+- Advanced analytics dashboard
+- AI-powered learning recommendations
+- Integration with external learning platforms
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our contributing guidelines before submitting pull requests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+Built with ❤️ by [Your Name]

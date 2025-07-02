@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Achievement {
   type: string;
@@ -76,13 +77,15 @@ export default function AchievementsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-12 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-48 bg-gray-200 rounded"></div>
-            ))}
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 dark:from-background dark:via-background dark:to-primary/5">
+        <div className="container mx-auto px-4 py-12">
+          <div className="animate-pulse space-y-8">
+            <div className="h-14 bg-primary/10 rounded-xl w-1/3"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-52 bg-card/50 rounded-2xl"></div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -90,71 +93,108 @@ export default function AchievementsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Your Achievements</h1>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 dark:from-background dark:via-background dark:to-primary/5">
+      <div className="container mx-auto px-4 py-12">
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-5xl font-bold mb-12 bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent gradient-animate"
+        >
+          Your Achievements
+        </motion.h1>
 
-      {achievements.length === 0 ? (
-        <Card className="p-6 text-center">
-          <p className="text-lg text-gray-600">
-            Complete quizzes to earn achievements!
-          </p>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {achievements.map((achievement) => (
-            <Card 
-              key={achievement.type}
-              className={`p-6 ${
-                achievement.completed 
-                  ? 'bg-gradient-to-br from-yellow-50 to-yellow-100'
-                  : 'bg-white'
-              }`}
-            >
-              <div className="flex items-start space-x-4">
-                <div className="relative w-12 h-12">
-                  <Image
-                    src={getAchievementIcon(achievement.type)}
-                    alt={achievement.type}
-                    width={48}
-                    height={48}
-                    className={achievement.completed ? 'opacity-100' : 'opacity-50'}
-                  />
-                  {achievement.completed && (
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm">✓</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg mb-1">
-                    {achievement.type}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-3">
-                    {getAchievementDescription(achievement.type)}
-                  </p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Progress</span>
-                      <span>
-                        {achievement.progress} / {achievement.maxProgress}
-                      </span>
-                    </div>
-                    <Progress 
-                      value={(achievement.progress / achievement.maxProgress) * 100}
-                      className="h-2"
-                      indicatorClassName={
-                        achievement.completed 
-                          ? 'bg-green-500' 
-                          : 'bg-blue-500'
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
+        {achievements.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <Card className="p-8 text-center glass shadow-xl rounded-2xl border-primary/20">
+              <h3 className="text-2xl font-semibold mb-4">Start Your Journey</h3>
+              <p className="text-muted-foreground">
+                Complete quizzes to unlock achievements and track your progress!
+              </p>
             </Card>
-          ))}
-        </div>
-      )}
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AnimatePresence mode="popLayout">
+              {achievements.map((achievement, index) => (
+                <motion.div
+                  key={achievement.type}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ 
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 15,
+                    delay: index * 0.1 
+                  }}
+                >
+                  <Card 
+                    className={`p-6 transform transition-all duration-300 hover:scale-[1.02] ${
+                      achievement.completed 
+                        ? 'glass border-primary/30 shadow-lg shadow-primary/20' 
+                        : 'bg-card/50 backdrop-blur-sm hover:bg-card/80 border-border/50'
+                    } rounded-2xl`}
+                  >
+                    <div className="flex items-start space-x-4">
+                      <motion.div 
+                        className="relative w-14 h-14"
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                      >
+                        <Image
+                          src={getAchievementIcon(achievement.type)}
+                          alt={achievement.type}
+                          width={56}
+                          height={56}
+                          className={`drop-shadow-xl transition-opacity duration-300 ${
+                            achievement.completed ? 'opacity-100' : 'opacity-50'
+                          }`}
+                        />
+                        {achievement.completed && (
+                          <motion.div 
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-lg"
+                          >
+                            <span className="text-primary-foreground text-sm">✓</span>
+                          </motion.div>
+                        )}
+                      </motion.div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold mb-2">
+                          {achievement.type}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          {getAchievementDescription(achievement.type)}
+                        </p>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Progress</span>
+                            <span className="font-medium">
+                              {achievement.progress} / {achievement.maxProgress}
+                            </span>
+                          </div>
+                          <Progress 
+                            value={(achievement.progress / achievement.maxProgress) * 100}
+                            className="h-2.5 rounded-full bg-primary/10"
+                            indicatorClassName={
+                              achievement.completed 
+                                ? 'bg-gradient-to-r from-primary to-accent' 
+                                : 'bg-primary'
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

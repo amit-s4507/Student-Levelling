@@ -1,156 +1,254 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { UserProfile } from "@/components/ui/user-profile";
-import Link from "next/link";
+import { motion } from 'framer-motion';
+import { useUser } from '@clerk/nextjs';
+import { Card } from '@/components/ui/card';
+import Image from 'next/image';
+import Link from 'next/link';
 
 interface CourseProgress {
-  programming: number;
-  math: number;
-  science: number;
+  id: string;
+  title: string;
+  description: string;
+  progress: number;
+  icon: string;
 }
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const { user, isLoaded } = useUser();
-  const [progress, setProgress] = useState<CourseProgress>({
-    programming: 0,
-    math: 0,
-    science: 0
+interface UserStats {
+  points: number;
+  level: string;
+  totalQuizzes: number;
+  courseProgress: Record<string, number>;
+  achievements: Array<{
+    type: string;
+    progress: number;
+    maxProgress: number;
+    completed: boolean;
+  }>;
+  studyStreak: number;
+  lastStudyDate: string | null;
+}
+
+export default function Dashboard() {
+  const { user } = useUser();
+  const [stats, setStats] = useState<UserStats>({
+    points: 0,
+    level: 'Beginner',
+    totalQuizzes: 0,
+    courseProgress: {},
+    achievements: [],
+    studyStreak: 0,
+    lastStudyDate: null
   });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    if (!user) {
-      router.push("/sign-in");
-      return;
-    }
-
-    const fetchProgress = async () => {
-      try {
-        const response = await fetch('/api/user/stats');
-        if (!response.ok) throw new Error('Failed to fetch user stats');
-        const data = await response.json();
-        setProgress(data.courseProgress);
-      } catch (error) {
-        console.error('Error fetching progress:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProgress();
-  }, [user, isLoaded, router]);
-
-  const courses = [
+  const [courses, setCourses] = useState<CourseProgress[]>([
     {
       id: 'programming',
       title: 'Programming Fundamentals',
       description: 'Learn the basics of programming with interactive lessons',
-      progress: progress.programming,
-      color: 'bg-blue-500'
+      progress: 0,
+      icon: '/icons/javascript.svg'
     },
     {
       id: 'math',
       title: 'Mathematics',
       description: 'Master mathematical concepts through gamified learning',
-      progress: progress.math,
-      color: 'bg-green-500'
+      progress: 0,
+      icon: '/icons/math.svg'
     },
     {
       id: 'science',
       title: 'Science',
       description: 'Explore scientific concepts with interactive experiments',
-      progress: progress.science,
-      color: 'bg-purple-500'
+      progress: 0,
+      icon: '/icons/science.svg'
     }
-  ];
+  ]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/user/stats');
+        const data = await response.json();
+        setStats(data);
+        
+        // Update course progress using the courseProgress from API
+        setCourses(prev => prev.map(course => ({
+          ...course,
+          progress: data.courseProgress[course.id] || 0
+        })));
+      } catch (error) {
+        console.error('Error fetching user stats:', error);
+      }
+    };
+
+    if (user) fetchStats();
+  }, [user]);
 
   const features = [
     {
       title: 'AI Chat Assistant',
       description: 'Get help with your studies',
-      href: '/Chat',
-      color: 'bg-pink-50'
+      icon: '🤖',
+      link: '/Chat',
+      color: 'from-pink-500 to-rose-500'
     },
     {
       title: 'Leaderboard',
       description: 'See where you rank',
-      href: '/Leaderboard',
-      color: 'bg-yellow-50'
+      icon: '🏆',
+      link: '/Leaderboard',
+      color: 'from-yellow-400 to-orange-500'
     },
     {
       title: 'Achievements',
       description: 'View your badges',
-      href: '/achievements',
-      color: 'bg-green-50'
+      icon: '🎯',
+      link: '/achievements',
+      color: 'from-green-400 to-emerald-500'
     },
     {
       title: 'Image Generator',
       description: 'Create learning visuals',
-      href: '/Imagen',
-      color: 'bg-blue-50'
+      icon: '🎨',
+      link: '/Imagen',
+      color: 'from-blue-400 to-indigo-500'
     }
   ];
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-20 bg-gray-200 rounded"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <UserProfile />
-
-      <h1 className="text-3xl font-bold mt-8 mb-6">My Learning Dashboard</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {courses.map((course) => (
-          <Link href={`/courses/${course.id}`} key={course.id}>
-            <Card className="p-6 h-full hover:shadow-lg transition-shadow cursor-pointer">
-              <h2 className="text-xl font-bold mb-2">{course.title}</h2>
-              <p className="text-gray-600 mb-4">{course.description}</p>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>PROGRESS</span>
-                  <span>{course.progress}%</span>
-                </div>
-                <Progress 
-                  value={course.progress} 
-                  className="h-2"
-                  indicatorClassName={course.color}
-                />
+    <div className="min-h-screen p-8 space-y-8 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <div className="max-w-7xl mx-auto">
+        {/* User Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-12"
+        >
+          <div className="flex items-center gap-6 p-6 glass-effect rounded-2xl">
+            <div className="relative">
+              <Image
+                src={user?.imageUrl || '/default-avatar.png'}
+                alt="Profile"
+                width={80}
+                height={80}
+                className="rounded-full border-4 border-white shadow-lg"
+              />
+              <div className="absolute -bottom-2 -right-2 bg-green-400 p-2 rounded-full">
+                <span className="text-xl">✨</span>
               </div>
-            </Card>
-          </Link>
-        ))}
-      </div>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold gradient-text">
+                Welcome back, {user?.firstName || 'Student'}!
+              </h1>
+              <div className="flex gap-6 mt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🎯</span>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Points</p>
+                    <p className="font-bold">{stats.points}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">📚</span>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Level</p>
+                    <p className="font-bold">{stats.level}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">✅</span>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Quizzes</p>
+                    <p className="font-bold">{stats.totalQuizzes}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {features.map((feature) => (
-          <Link href={feature.href} key={feature.title}>
-            <Card className={`p-6 h-full hover:shadow-lg transition-shadow cursor-pointer ${feature.color}`}>
-              <h3 className="font-semibold mb-2">{feature.title}</h3>
-              <p className="text-gray-600">{feature.description}</p>
-            </Card>
-          </Link>
-        ))}
+        {/* Course Progress */}
+        <h2 className="text-2xl font-bold mb-6">My Learning Progress</h2>
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
+          {courses.map((course, index) => (
+            <motion.div
+              key={course.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Link href={`/courses/${course.id}`}>
+                <Card className="p-6 hover-card transition-transform duration-200 hover:scale-105 cursor-pointer">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 p-2 flex items-center justify-center">
+                    <Image
+                      src={course.icon}
+                      alt={course.title}
+                      width={32}
+                      height={32}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1">{course.title}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      {course.description}
+                    </p>
+                    <div className="relative pt-1">
+                      <div className="flex mb-2 items-center justify-between">
+                        <div>
+                          <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full bg-blue-100 text-blue-600">
+                            Progress
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-semibold inline-block text-blue-600">
+                            {course.progress}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="overflow-hidden h-2 mb-4 text-xs flex rounded-full bg-blue-100">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${course.progress}%` }}
+                          transition={{ duration: 1, ease: "easeOut" }}
+                          className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Features Grid */}
+        <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
+        <div className="grid md:grid-cols-4 gap-6">
+          {features.map((feature, index) => (
+            <motion.div
+              key={feature.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Link href={feature.link}>
+                <Card className="p-6 hover-card cursor-pointer h-full">
+                  <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${feature.color} flex items-center justify-center mb-4`}>
+                    <span className="text-2xl">{feature.icon}</span>
+                  </div>
+                  <h3 className="font-semibold mb-2">{feature.title}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {feature.description}
+                  </p>
+                </Card>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
       </div>
     </div>
   );
