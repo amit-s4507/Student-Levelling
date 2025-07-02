@@ -9,56 +9,53 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface LeaderboardEntry {
     rank: number;
-    userId: string;
+    id: string;
     name: string;
-    score: number;
-    recentAchievement?: string;
+    points: number;
+    level: number;
+    quizCount: number;
+    isCurrentUser: boolean;
+}
+
+interface LeaderboardResponse {
+    leaderboard: LeaderboardEntry[];
+    currentUserRank: number;
+    pagination: {
+        currentPage: number;
+        totalPages: number;
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+    };
 }
 
 export default function LeaderboardPage() {
     const { user } = useUser();
-    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+    const [leaderboardData, setLeaderboardData] = useState<LeaderboardResponse | null>(null);
     const [timeframe, setTimeframe] = useState<'all' | 'weekly' | 'monthly'>('all');
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchLeaderboard = async () => {
             try {
                 setLoading(true);
+                setError(null);
                 const response = await fetch(`/api/leaderboard?timeframe=${timeframe}`);
                 if (!response.ok) throw new Error('Failed to fetch leaderboard');
                 const data = await response.json();
-                setLeaderboard(data);
+                setLeaderboardData(data);
             } catch (error) {
                 console.error('Error fetching leaderboard:', error);
+                setError('Failed to load leaderboard. Please try again.');
             } finally {
                 setLoading(false);
             }
         };
 
-        // Initialize user data
-        const initUser = async () => {
-            try {
-                await fetch('/api/user/init', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-            } catch (error) {
-                console.error('Error initializing user:', error);
-            }
-        };
-
-        if (user) {
-            initUser();
-        }
-
         fetchLeaderboard();
-        // Poll for updates every 5 seconds
         const interval = setInterval(fetchLeaderboard, 5000);
         return () => clearInterval(interval);
-    }, [timeframe, user]);
+    }, [timeframe]);
 
     const getMedalIcon = (rank: number) => {
         switch (rank) {
@@ -68,6 +65,22 @@ export default function LeaderboardPage() {
             default: return null;
         }
     };
+
+    if (error) {
+        return (
+            <Card className="p-12 text-center glass shadow-xl rounded-2xl border-destructive/20">
+                <h3 className="text-2xl font-semibold mb-4 text-destructive">Error</h3>
+                <p className="text-muted-foreground">{error}</p>
+                <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => window.location.reload()}
+                >
+                    Try Again
+                </Button>
+            </Card>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 dark:from-background dark:via-background dark:to-primary/5">
@@ -110,7 +123,7 @@ export default function LeaderboardPage() {
                         <div className="flex items-center justify-center py-20">
                             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
                         </div>
-                    ) : leaderboard.length === 0 ? (
+                    ) : !leaderboardData || leaderboardData.leaderboard.length === 0 ? (
                         <Card className="p-12 text-center glass shadow-xl rounded-2xl border-primary/20">
                             <h3 className="text-2xl font-semibold mb-4">No Entries Yet</h3>
                             <p className="text-muted-foreground">Complete quizzes to appear on the leaderboard!</p>
@@ -118,9 +131,9 @@ export default function LeaderboardPage() {
                     ) : (
                         <AnimatePresence mode="popLayout">
                             <div className="space-y-4">
-                                {leaderboard.map((entry, index) => (
+                                {leaderboardData.leaderboard.map((entry, index) => (
                                     <motion.div
-                                        key={entry.userId}
+                                        key={entry.id}
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: 20 }}
@@ -133,7 +146,7 @@ export default function LeaderboardPage() {
                                     >
                                         <Card 
                                             className={`p-6 flex items-center justify-between transform transition-all duration-300 hover:scale-[1.02] ${
-                                                user?.id === entry.userId 
+                                                entry.isCurrentUser
                                                     ? 'glass border-primary/30 shadow-lg shadow-primary/20' 
                                                     : 'bg-card/50 backdrop-blur-sm hover:bg-card/80 border-border/50'
                                             } rounded-2xl`}
@@ -161,24 +174,18 @@ export default function LeaderboardPage() {
                                                 <div>
                                                     <h3 className="text-xl font-semibold flex items-center gap-3">
                                                         {entry.name}
-                                                        {user?.id === entry.userId && (
+                                                        {entry.isCurrentUser && (
                                                             <span className="text-sm bg-primary/10 text-primary px-3 py-1 rounded-full font-medium">You</span>
                                                         )}
                                                     </h3>
-                                                    {entry.recentAchievement && (
-                                                        <motion.p 
-                                                            initial={{ opacity: 0 }}
-                                                            animate={{ opacity: 1 }}
-                                                            className="text-sm text-accent-foreground flex items-center gap-2 mt-2"
-                                                        >
-                                                            🏆 <span className="font-medium">{entry.recentAchievement}</span>
-                                                        </motion.p>
-                                                    )}
+                                                    <p className="text-sm text-muted-foreground mt-1">
+                                                        Level {entry.level} • {entry.quizCount} Quizzes
+                                                    </p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent gradient-animate">
-                                                    {entry.score}
+                                                    {entry.points}
                                                 </p>
                                                 <p className="text-sm text-muted-foreground mt-1">Points</p>
                                             </div>

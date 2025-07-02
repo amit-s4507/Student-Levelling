@@ -9,7 +9,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user data including quiz attempts and achievements
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -35,16 +34,13 @@ export async function GET(req: Request) {
     const courses = ['programming', 'math', 'science'];
 
     for (const course of courses) {
-      const attempts = user.quizAttempts.filter(a => a.courseId === course);
-      if (attempts.length > 0) {
-        const totalScore = attempts.reduce((sum, attempt) => sum + (attempt.score / attempt.total), 0);
-        courseProgress[course] = Math.round((totalScore / attempts.length) * 100);
-      } else {
-        courseProgress[course] = 0;
-      }
+      const courseQuizzes = user.quizAttempts.filter(q => q.courseId === course);
+      const perfectScores = courseQuizzes.filter(q => q.score === 10).length;
+      const progressPercentage = Math.min((perfectScores / 10) * 100, 100);
+      courseProgress[course] = progressPercentage;
     }
 
-    // Calculate total quizzes taken
+    // Calculate total quizzes
     const totalQuizzes = user.quizAttempts.length;
 
     // Format achievements
@@ -63,13 +59,10 @@ export async function GET(req: Request) {
       date: attempt.createdAt
     }));
 
-    // Calculate level based on points
-    const level = calculateLevel(user.points);
-
     return NextResponse.json({
       points: user.points,
       name: user.name,
-      level,
+      level: calculateLevel(user.points),
       totalQuizzes,
       courseProgress,
       achievements,
@@ -77,6 +70,7 @@ export async function GET(req: Request) {
       studyStreak: user.studyStreak || 0,
       lastStudyDate: user.lastStudyDate
     });
+
   } catch (error) {
     console.error('Error fetching user stats:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
@@ -84,9 +78,8 @@ export async function GET(req: Request) {
 }
 
 function calculateLevel(points: number): string {
-  if (points >= 5000) return "Master";
-  if (points >= 3000) return "Expert";
-  if (points >= 1500) return "Advanced";
-  if (points >= 500) return "Intermediate";
-  return "Beginner";
+  if (points >= 1000) return 'Expert';
+  if (points >= 500) return 'Advanced';
+  if (points >= 200) return 'Intermediate';
+  return 'Beginner';
 } 

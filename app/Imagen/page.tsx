@@ -5,12 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import Image from 'next/image';
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
 export default function ImagenPage() {
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
   const [prompt, setPrompt] = useState("");
+  const [style, setStyle] = useState("realistic");
   const [image, setImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Redirect if not authenticated
+  if (isLoaded && !user) {
+    router.push('/sign-in');
+    return null;
+  }
 
   const generateImage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +37,10 @@ export default function ImagenPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({ 
+          prompt: prompt.trim(),
+          style: style
+        }),
       });
 
       if (!response.ok) {
@@ -43,57 +57,79 @@ export default function ImagenPage() {
     }
   };
 
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Learning Visual Generator</h1>
-      
-      <Card className="p-6 max-w-2xl mx-auto">
-        <form onSubmit={generateImage} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Describe what you want to visualize
-            </label>
-            <Input
+      <h1 className="text-3xl font-bold mb-8 text-center">Learning Visual Generator</h1>
+      <Card className="p-6 bg-card">
+        <form onSubmit={generateImage} className="space-y-4">
+          <div className="mb-6">
+            <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="E.g., Diagram of photosynthesis process"
-              className="w-full"
+              className="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              placeholder="Describe the learning concept you want to visualize..."
+              rows={4}
+              disabled={isLoading}
             />
+            <div className="flex justify-between mt-2">
+              <Button
+                type="submit"
+                disabled={isLoading || !prompt.trim()}
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isLoading ? 'Generating...' : 'Generate Image'}
+              </Button>
+              <select
+                value={style}
+                onChange={(e) => setStyle(e.target.value)}
+                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                disabled={isLoading}
+              >
+                <option value="realistic">Realistic</option>
+                <option value="cartoon">Cartoon</option>
+                <option value="sketch">Sketch</option>
+                <option value="diagram">Diagram</option>
+              </select>
+            </div>
           </div>
-          <Button type="submit" disabled={isLoading || !prompt.trim()}>
-            {isLoading ? "Generating..." : "Generate Image"}
-          </Button>
         </form>
 
-        {error && (
-          <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-lg">
-            {error}
-          </div>
-        )}
+        <div className="mt-6">
+          {isLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          )}
+          
+          {error && (
+            <div className="p-4 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="shrink-0">⚠️</div>
+                <div>{error}</div>
+              </div>
+            </div>
+          )}
 
-        {isLoading && (
-          <div className="mt-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Generating your visualization...</p>
-          </div>
-        )}
-
-        {image && (
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4">Generated Image</h2>
-            <div className="relative aspect-square w-full max-w-lg mx-auto">
+          {image && (
+            <div className="relative aspect-square w-full max-w-2xl mx-auto overflow-hidden rounded-lg shadow-xl">
               <Image
                 src={image}
-                alt={prompt}
+                alt="Generated image"
                 fill
-                className="rounded-lg object-contain"
+                className="object-cover"
+                priority
               />
             </div>
-            <p className="mt-4 text-sm text-gray-600 text-center">
-              Prompt: {prompt}
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </Card>
     </div>
   );

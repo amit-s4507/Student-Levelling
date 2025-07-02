@@ -37,6 +37,7 @@ export default function CoursePage({ params }: { params: { courseId: string } })
   const [error, setError] = useState<string | null>(null);
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -83,7 +84,13 @@ export default function CoursePage({ params }: { params: { courseId: string } })
         <Card className="max-w-2xl mx-auto p-8 text-center">
           <h1 className="text-2xl font-bold mb-4 text-red-600">Error</h1>
           <p className="mb-4">{error}</p>
-          <Button onClick={() => router.push("/dashboard")}>Back to Dashboard</Button>
+          <div className="space-x-4">
+            <Button onClick={() => router.push("/dashboard")}>Back to Dashboard</Button>
+            <Button onClick={() => {
+              setError(null);
+              handleRestart();
+            }}>Try Again</Button>
+          </div>
         </Card>
       </div>
     );
@@ -119,8 +126,12 @@ export default function CoursePage({ params }: { params: { courseId: string } })
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedOption(null);
     } else {
+      if (submitting) return; // Prevent double submission
+      
       try {
-        // Record the quiz attempt and get results
+        setSubmitting(true);
+        setError(null);
+        
         if (!user) {
           throw new Error('User not authenticated');
         }
@@ -140,30 +151,32 @@ export default function CoursePage({ params }: { params: { courseId: string } })
           })
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to submit quiz');
-        }
+        const responseData = await response.json();
 
-        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(responseData.message || 'Failed to submit quiz');
+        }
         
         // Update quiz result with points and achievements
         setQuizResult({
           score: finalScore,
-          points: result.points,
-          totalPoints: result.totalPoints,
-          newAchievements: result.newAchievements
+          points: responseData.points,
+          totalPoints: responseData.totalPoints,
+          newAchievements: responseData.newAchievements || []
         });
 
         // Show confetti for perfect score or new achievements
-        if (finalScore === totalQuestions || result.newAchievements.length > 0) {
+        if (finalScore === totalQuestions || (responseData.newAchievements && responseData.newAchievements.length > 0)) {
           setShowConfetti(true);
         }
+        
+        setShowResults(true);
       } catch (error) {
         console.error('Failed to record quiz attempt:', error);
-        setError('Failed to save quiz results. Please try again.');
-        return; // Don't proceed to show results if there was an error
+        setError(error instanceof Error ? error.message : 'Failed to save quiz results. Please try again.');
+      } finally {
+        setSubmitting(false);
       }
-      setShowResults(true);
     }
   };
 

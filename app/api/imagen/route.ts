@@ -1,63 +1,76 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
+import OpenAI from 'openai';
 
-export async function POST(req: Request) {
+// Validate OpenAI API key
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error('Missing OPENAI_API_KEY environment variable');
+}
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export async function POST(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    const { userId } = auth();
+    if (!userId) {
+      return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { prompt } = await req.json();
+    const body = await request.json();
+    const { prompt, style = 'realistic' } = body;
 
     if (!prompt) {
-      return new NextResponse("Missing prompt", { status: 400 });
+      return new NextResponse('Missing prompt', { status: 400 });
     }
 
-    if (!process.env.STABLE_DIFFUSION_API_KEY) {
-      return new NextResponse("Stable Diffusion API key not configured", { status: 500 });
+    // Enhance prompt based on style
+    let enhancedPrompt = prompt;
+    switch (style) {
+      case 'cartoon':
+        enhancedPrompt = `Create a cartoon-style educational illustration of: ${prompt}. Use bright colors and simple shapes.`;
+        break;
+      case 'sketch':
+        enhancedPrompt = `Create a detailed sketch/drawing of: ${prompt}. Use clean lines and clear visual hierarchy.`;
+        break;
+      case 'diagram':
+        enhancedPrompt = `Create a clear, educational diagram of: ${prompt}. Include labels and arrows where appropriate.`;
+        break;
+      default:
+        enhancedPrompt = `Create a realistic, detailed visualization of: ${prompt}. Focus on educational clarity.`;
     }
 
-    const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${process.env.STABLE_DIFFUSION_API_KEY}`,
-      },
-      body: JSON.stringify({
-        text_prompts: [
-          {
-            text: prompt,
-            weight: 1
-          }
-        ],
-        cfg_scale: 7,
-        clip_guidance_preset: 'FAST_BLUE',
-        height: 1024,
-        width: 1024,
-        samples: 1,
-        steps: 30,
-      }),
-    });
+    try {
+      const response = await openai.images.generate({
+        model: "dall-e-3",
+        prompt: enhancedPrompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+        style: "natural"
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(`Stable Diffusion API error: ${error.message || response.statusText}`);
+      if (!response.data?.[0]?.url) {
+        throw new Error('No image URL received from OpenAI');
+      }
+
+      return NextResponse.json({
+        imageUrl: response.data[0].url
+      });
+    } catch (openaiError) {
+      console.error('OpenAI API Error:', openaiError);
+      if (openaiError.status === 429) {
+        return new NextResponse('Rate limit exceeded. Please try again later.', { status: 429 });
+      }
+      return new NextResponse('Failed to generate image. Please try again.', { status: 500 });
     }
-
-    const result = await response.json();
-    
-    if (!result.artifacts?.[0]?.base64) {
-      throw new Error('No image generated');
-    }
-
-    const imageUrl = `data:image/png;base64,${result.artifacts[0].base64}`;
-
-    return NextResponse.json({ imageUrl });
 
   } catch (error) {
-    console.error('[IMAGE_GENERATION_ERROR]', error);
-    return new NextResponse(error instanceof Error ? error.message : "Internal Error", { status: 500 });
+    console.error('Image Generation API Error:', error);
+    return new NextResponse(
+      error instanceof Error ? error.message : 'Internal Server Error',
+      { status: 500 }
+    );
   }
 } 

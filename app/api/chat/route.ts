@@ -1,46 +1,48 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Prepare the chat context
-const context = `You are an AI tutor helping students learn various subjects. You should:
-1. Provide clear, concise explanations
-2. Use examples when helpful
-3. Break down complex topics into simpler parts
-4. Encourage critical thinking
-5. Be patient and supportive`;
-
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    const { userId } = auth();
+    if (!userId) {
+      return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { userPrompt } = await req.json();
+    const body = await request.json();
+    const { userPrompt } = body;
 
     if (!userPrompt) {
-      return new NextResponse("Missing prompt", { status: 400 });
+      return new NextResponse('Missing prompt', { status: 400 });
     }
 
-    const completion = await openai.chat.completions.create({
+    const systemPrompt = `You are a helpful AI tutor. Your goal is to help students learn and understand concepts better. 
+    Be clear, concise, and encouraging in your responses. If a student asks about a topic you're not sure about, 
+    be honest and suggest reliable resources for learning more.`;
+
+    const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
-        { role: "system", content: context },
+        { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
-      max_tokens: 1000
+      temperature: 0.7,
+      max_tokens: 500,
     });
 
-    const text = completion.choices[0]?.message?.content || "No response generated";
-    return NextResponse.json({ text });
+    return NextResponse.json({
+      text: response.choices[0].message.content
+    });
 
   } catch (error) {
-    console.error('[CHAT_ERROR]', error);
-    return new NextResponse(error instanceof Error ? error.message : "Internal Error", { status: 500 });
+    console.error('Chat API Error:', error);
+    return new NextResponse(
+      error instanceof Error ? error.message : 'Internal Server Error',
+      { status: 500 }
+    );
   }
 }
