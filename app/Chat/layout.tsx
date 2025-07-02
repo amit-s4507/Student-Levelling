@@ -8,17 +8,12 @@ export default function RootLayout({
 }) {
   return (
     <main>
-        <ThemeProvider
-          attribute='class'
-          defaultTheme='light'
-          enableSystem
-          disableTransitionOnChange
-        >
-          <div className="absolute top-5 right-5">
-            <ModeToggle />
-          </div>
-          {children}
-        </ThemeProvider>
-      </main>
+      <ThemeProvider>
+        <div className="absolute top-5 right-5">
+          <ModeToggle />
+        </div>
+        {children}
+      </ThemeProvider>
+    </main>
   )
 }

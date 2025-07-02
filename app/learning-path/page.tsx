@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
 import { Card } from '@/components/ui/card';
@@ -25,8 +25,8 @@ export default function LearningPath() {
   const [paths, setPaths] = useState<LearningPath[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Simulated data - In production, this would be AI-generated based on user's progress and interests
-  const recommendedPaths: LearningPath[] = [
+  // Move recommendedPaths to useMemo
+  const recommendedPaths = useMemo(() => [
     {
       id: 'web-dev',
       title: 'Full-Stack Web Development',
@@ -60,7 +60,7 @@ export default function LearningPath() {
       skills: ['Mobile Development', 'UI Design', 'Testing'],
       icon: '/icons/react.svg'
     }
-  ];
+  ], []); // Empty dependency array since this is static data
 
   useEffect(() => {
     // Simulate API call to get personalized learning paths

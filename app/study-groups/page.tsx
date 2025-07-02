@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
 import { Card } from '@/components/ui/card';
@@ -109,40 +109,42 @@ function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModalProps) 
 export default function StudyGroups() {
   const { user } = useUser();
   const [groups, setGroups] = useState<StudyGroup[]>([]);
+  const [filteredGroups, setFilteredGroups] = useState<StudyGroup[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'my-groups'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Simulated data - In production, this would come from your backend
-  const mockGroups: StudyGroup[] = [
+  const mockGroups = useMemo(() => ([
     {
       id: '1',
-      name: 'JavaScript Fundamentals',
+      name: 'Web Development Study Group',
+      description: 'Learn HTML, CSS, and JavaScript together',
       topic: 'Programming',
-      members: 12,
+      members: 15,
       isLive: true,
-      description: 'Learn JavaScript basics together with live coding sessions',
-      creator: {
-        name: 'John Doe',
-        image: '/default-avatar.png'
+      schedule: {
+        day: 'Monday',
+        time: '18:00'
       }
     },
     {
       id: '2',
-      name: 'Advanced Mathematics',
+      name: 'Math Problem Solving',
+      description: 'Practice advanced mathematics problems',
       topic: 'Mathematics',
       members: 8,
       isLive: false,
-      description: 'Group study for advanced mathematical concepts',
-      creator: {
-        name: 'Jane Smith',
-        image: '/default-avatar.png'
+      schedule: {
+        day: 'Wednesday',
+        time: '17:00'
       }
     }
-  ];
+  ]), []); // Empty dependency array since this is static data
 
   useEffect(() => {
     setGroups(mockGroups);
-  }, []);
+    setFilteredGroups(mockGroups);
+  }, [mockGroups]);
 
   const handleCreateGroup = (newGroup: Omit<StudyGroup, 'id' | 'members' | 'isLive'>) => {
     const group: StudyGroup = {
@@ -154,9 +156,20 @@ export default function StudyGroups() {
     setGroups([...groups, group]);
   };
 
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    const filtered = groups.filter(group =>
+      group.name.toLowerCase().includes(term.toLowerCase()) ||
+      group.topic.toLowerCase().includes(term.toLowerCase()) ||
+      group.description.toLowerCase().includes(term.toLowerCase())
+    );
+    setFilteredGroups(filtered);
+  };
+
   const filteredGroups = activeTab === 'my-groups'
     ? groups.filter(group => group.creator.name === user?.fullName)
-    : groups;
+    : filteredGroups;
 
   return (
     <div className="min-h-screen p-8 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
