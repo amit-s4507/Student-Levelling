@@ -1,5 +1,5 @@
 import { ThemeProvider } from '@/components/theme-provider'
-import ModeToggle from '@/components/color-toggle'
+import { ColorToggle } from '@/components/color-toggle'
 
 export default function RootLayout({
   children,
@@ -10,7 +10,7 @@ export default function RootLayout({
     <main>
       <ThemeProvider>
         <div className="absolute top-5 right-5">
-          <ModeToggle />
+          <ColorToggle />
         </div>
         {children}
       </ThemeProvider>

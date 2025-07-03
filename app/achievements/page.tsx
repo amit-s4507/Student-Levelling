@@ -21,6 +21,7 @@ export default function AchievementsPage() {
   const router = useRouter();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -30,23 +31,48 @@ export default function AchievementsPage() {
       return;
     }
 
-    // Fetch achievements
-    fetch('/api/user/stats')
-      .then(res => res.json())
-      .then(data => {
+    const fetchAchievements = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch('/api/user/stats');
+        if (!response.ok) {
+          throw new Error('Failed to fetch achievements');
+        }
+        const data = await response.json();
         setAchievements(data.achievements || []);
-        setLoading(false);
-      })
-      .catch(err => {
+      } catch (err) {
         console.error('Failed to fetch achievements:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch achievements');
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchAchievements();
+    // Refresh achievements every 10 seconds
+    const interval = setInterval(fetchAchievements, 10000);
+    return () => clearInterval(interval);
   }, [user, isLoaded, router]);
 
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8 text-center">Loading achievements...</h1>
+        <Card className="max-w-2xl mx-auto p-8">
+          <h1 className="text-3xl font-bold mb-4 text-center">Loading achievements...</h1>
+          <Progress value={100} className="w-full" />
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="max-w-2xl mx-auto p-8 text-center">
+          <h1 className="text-2xl font-bold mb-4 text-red-600">Error</h1>
+          <p className="mb-4">{error}</p>
+        </Card>
       </div>
     );
   }
@@ -56,86 +82,127 @@ export default function AchievementsPage() {
     return achievement ? (achievement.progress / achievement.maxProgress) * 100 : 0;
   };
 
+  const getProgressText = (type: string) => {
+    const achievement = achievements.find(a => a.type === type);
+    if (!achievement) return '0/0';
+    return `${achievement.progress}/${achievement.maxProgress}`;
+  };
+
   const isCompleted = (type: string) => {
     return achievements.some(a => a.type === type && a.completed);
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Your Achievements</h1>
+      <motion.h1 
+        className="text-4xl font-bold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        Your Achievements
+      </motion.h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Math Achievement */}
-        <Card className="p-6 bg-card">
-          <div className="flex items-center mb-4">
-            <Image
-              src="/icons/bronzemedal.svg"
-              alt="Math Medal"
-              width={40}
-              height={40}
-            />
-            <h3 className="text-xl font-semibold ml-3">Math Whiz</h3>
-          </div>
-          <p className="text-gray-600 mb-4">Get 3 perfect scores in math quizzes</p>
-          <Progress value={getProgress('Math Whiz')} className="mb-2" />
-          <p className="text-sm text-right">
-            {isCompleted('Math Whiz') ? 'Completed!' : '0/3 completed'}
-          </p>
-        </Card>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card className="p-6 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <Image
+                src="/icons/bronzemedal.svg"
+                alt="Math Medal"
+                width={40}
+                height={40}
+                className={isCompleted('Math Whiz') ? 'animate-bounce' : ''}
+              />
+              <h3 className="text-xl font-semibold ml-3">Math Whiz</h3>
+            </div>
+            <p className="text-muted-foreground mb-4">Get 3 perfect scores in math quizzes</p>
+            <Progress value={getProgress('Math Whiz')} className="mb-2" />
+            <p className="text-sm text-right text-muted-foreground">
+              {isCompleted('Math Whiz') ? 'Completed!' : `${getProgressText('Math Whiz')} perfect scores`}
+            </p>
+          </Card>
+        </motion.div>
 
         {/* Programming Achievement */}
-        <Card className="p-6 bg-card">
-          <div className="flex items-center mb-4">
-            <Image
-              src="/icons/silvermedal.svg"
-              alt="Programming Medal"
-              width={40}
-              height={40}
-            />
-            <h3 className="text-xl font-semibold ml-3">Coding Master</h3>
-          </div>
-          <p className="text-gray-600 mb-4">Complete 10 programming quizzes</p>
-          <Progress value={getProgress('Coding Master')} className="mb-2" />
-          <p className="text-sm text-right">
-            {isCompleted('Coding Master') ? 'Completed!' : '0/10 completed'}
-          </p>
-        </Card>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <Card className="p-6 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <Image
+                src="/icons/silvermedal.svg"
+                alt="Programming Medal"
+                width={40}
+                height={40}
+                className={isCompleted('Coding Master') ? 'animate-bounce' : ''}
+              />
+              <h3 className="text-xl font-semibold ml-3">Coding Master</h3>
+            </div>
+            <p className="text-muted-foreground mb-4">Complete 10 programming quizzes</p>
+            <Progress value={getProgress('Coding Master')} className="mb-2" />
+            <p className="text-sm text-right text-muted-foreground">
+              {isCompleted('Coding Master') ? 'Completed!' : `${getProgressText('Coding Master')} quizzes`}
+            </p>
+          </Card>
+        </motion.div>
 
         {/* Science Achievement */}
-        <Card className="p-6 bg-card">
-          <div className="flex items-center mb-4">
-            <Image
-              src="/icons/goldmedal.svg"
-              alt="Science Medal"
-              width={40}
-              height={40}
-            />
-            <h3 className="text-xl font-semibold ml-3">Science Explorer</h3>
-          </div>
-          <p className="text-gray-600 mb-4">Complete 5 science quizzes</p>
-          <Progress value={getProgress('Science Explorer')} className="mb-2" />
-          <p className="text-sm text-right">
-            {isCompleted('Science Explorer') ? 'Completed!' : '0/5 completed'}
-          </p>
-        </Card>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
+          <Card className="p-6 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <Image
+                src="/icons/goldmedal.svg"
+                alt="Science Medal"
+                width={40}
+                height={40}
+                className={isCompleted('Science Explorer') ? 'animate-bounce' : ''}
+              />
+              <h3 className="text-xl font-semibold ml-3">Science Explorer</h3>
+            </div>
+            <p className="text-muted-foreground mb-4">Complete 5 science quizzes</p>
+            <Progress value={getProgress('Science Explorer')} className="mb-2" />
+            <p className="text-sm text-right text-muted-foreground">
+              {isCompleted('Science Explorer') ? 'Completed!' : `${getProgressText('Science Explorer')} quizzes`}
+            </p>
+          </Card>
+        </motion.div>
 
         {/* Perfect Score Achievement */}
-        <Card className="p-6 bg-card">
-          <div className="flex items-center mb-4">
-            <Image
-              src="/icons/goldmedal.svg"
-              alt="Perfect Score Medal"
-              width={40}
-              height={40}
-            />
-            <h3 className="text-xl font-semibold ml-3">Perfect Score</h3>
-          </div>
-          <p className="text-gray-600 mb-4">Get a perfect score in any quiz</p>
-          <Progress value={getProgress('Perfect Score')} className="mb-2" />
-          <p className="text-sm text-right">
-            {isCompleted('Perfect Score') ? 'Completed!' : 'Not achieved yet'}
-          </p>
-        </Card>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+        >
+          <Card className="p-6 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <Image
+                src="/icons/goldmedal.svg"
+                alt="Perfect Score Medal"
+                width={40}
+                height={40}
+                className={isCompleted('Perfect Score') ? 'animate-bounce' : ''}
+              />
+              <h3 className="text-xl font-semibold ml-3">Perfect Score</h3>
+            </div>
+            <p className="text-muted-foreground mb-4">Get a perfect score in any quiz</p>
+            <Progress value={getProgress('Perfect Score')} className="mb-2" />
+            <p className="text-sm text-right text-muted-foreground">
+              {isCompleted('Perfect Score') ? 'Completed!' : 'Not achieved yet'}
+            </p>
+          </Card>
+        </motion.div>
       </div>
 
       {achievements.some(a => a.completed) && <Confetti />}

@@ -217,52 +217,41 @@ export default function CoursePage({ params }: { params: { courseId: string } })
           {showConfetti && <Confetti />}
           <h1 className="text-3xl font-bold mb-6">Quiz Complete!</h1>
           
-          <div className="mb-8 p-6 bg-blue-50 rounded-lg">
-            <p className="text-xl mb-4">
-              You scored {score} out of {totalQuestions}
-            </p>
-            
-            {quizResult && (
-              <div className="space-y-4">
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-blue-600">
-                    +{quizResult.points} Points
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Total Points: {quizResult.totalPoints}
-                  </p>
-                </div>
+          <div className="bg-blue-50 p-6 rounded-lg mb-6">
+            <p className="text-lg mb-2">You scored {quizResult?.score} out of {totalQuestions}</p>
+            <p className="text-2xl text-blue-600 font-bold mb-2">+{quizResult?.points} Points</p>
+            <p className="text-sm text-gray-600">Total Points: {quizResult?.totalPoints}</p>
+          </div>
 
-                {quizResult.newAchievements.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-xl font-semibold mb-4">🎉 New Achievements!</h3>
-                    <div className="flex flex-wrap justify-center gap-3">
-                      {quizResult.newAchievements.map((achievement, index) => (
-                        <div
-                          key={index}
-                          className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium"
-                        >
-                          {achievement}
-                        </div>
-                      ))}
+          {quizResult && (
+            <div className="space-y-4">
+              <div className="mt-6">
+                <h3 className="text-xl font-semibold mb-4">🎉 New Achievements!</h3>
+                <div className="flex flex-wrap justify-center gap-3">
+                  {quizResult.newAchievements.map((achievement, index) => (
+                    <div
+                      key={index}
+                      className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium"
+                    >
+                      {achievement}
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
-            )}
-
-            <div className="mt-8">
-              <Image
-                src={medal.icon}
-                alt={`${medal.type} Medal`}
-                width={80}
-                height={80}
-                className="mx-auto mb-4"
-              />
-              <p className="text-lg font-semibold">
-                You earned a {medal.type} Medal!
-              </p>
             </div>
+          )}
+
+          <div className="mt-8">
+            <Image
+              src={medal.icon}
+              alt={`${medal.type} Medal`}
+              width={80}
+              height={80}
+              className="mx-auto mb-4"
+            />
+            <p className="text-lg font-semibold">
+              You earned a {medal.type} Medal!
+            </p>
           </div>
 
           <div className="flex justify-center gap-4">

@@ -127,61 +127,161 @@ async function updateAchievements(userId: string, courseId: string, score: numbe
   try {
     const newAchievements: string[] = [];
 
-    // Get user's current achievements
+    // Get user's current achievements and quiz attempts
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: { 
         achievements: true,
         quizAttempts: {
           where: { courseId },
-          select: { score: true, total: true }
+          select: { 
+            score: true, 
+            total: true,
+            courseId: true 
+          }
         }
       }
     });
 
     if (!user) return newAchievements;
 
-    // Check for course-specific achievements
-    if (courseId === 'math' && score === total) {
-      const perfectScores = user.quizAttempts.filter(a => a.score === a.total).length;
-      if (perfectScores >= 3) {
-        const existingAchievement = user.achievements.find(a => a.type === 'Math Whiz');
-        if (!existingAchievement) {
-          await prisma.achievement.create({
-            data: {
-              userId,
-              type: 'Math Whiz',
-              progress: 3,
-              maxProgress: 3,
-              completed: true
-            }
-          });
-          newAchievements.push('Math Whiz');
+    // Update course progress achievement
+    const courseProgress = Math.floor((score / total) * 100);
+    await prisma.achievement.upsert({
+      where: {
+        userId_type: {
+          userId,
+          type: `${courseId}_progress`
         }
+      },
+      update: {
+        progress: courseProgress,
+        maxProgress: 100,
+        completed: courseProgress === 100
+      },
+      create: {
+        userId,
+        type: `${courseId}_progress`,
+        progress: courseProgress,
+        maxProgress: 100,
+        completed: courseProgress === 100
+      }
+    });
+
+    // Perfect Score Achievement
+    if (score === total) {
+      const perfectScoreAchievement = await prisma.achievement.upsert({
+        where: {
+          userId_type: {
+            userId,
+            type: 'Perfect Score'
+          }
+        },
+        update: {
+          progress: 1,
+          maxProgress: 1,
+          completed: true
+        },
+        create: {
+          userId,
+          type: 'Perfect Score',
+          progress: 1,
+          maxProgress: 1,
+          completed: true
+        }
+      });
+      if (!user.achievements.some(a => a.type === 'Perfect Score')) {
+        newAchievements.push('Perfect Score');
       }
     }
 
-    // Add perfect score achievement
-    if (score === total) {
-      const existingPerfectScore = user.achievements.find(a => a.type === 'Perfect Score');
-      if (!existingPerfectScore) {
-        await prisma.achievement.create({
-          data: {
+    // Course-specific achievements
+    const courseAttempts = user.quizAttempts.length + 1; // Include current attempt
+    const perfectScores = user.quizAttempts.filter(a => a.score === a.total && a.courseId === courseId).length;
+    const currentPerfectScores = perfectScores + (score === total ? 1 : 0);
+
+    if (courseId === 'math') {
+      const mathAchievement = await prisma.achievement.upsert({
+        where: {
+          userId_type: {
             userId,
-            type: 'Perfect Score',
-            progress: 1,
-            maxProgress: 1,
-            completed: true
+            type: 'Math Whiz'
           }
-        });
-        newAchievements.push('Perfect Score');
+        },
+        update: {
+          progress: currentPerfectScores,
+          maxProgress: 3,
+          completed: currentPerfectScores >= 3
+        },
+        create: {
+          userId,
+          type: 'Math Whiz',
+          progress: currentPerfectScores,
+          maxProgress: 3,
+          completed: currentPerfectScores >= 3
+        }
+      });
+      if (currentPerfectScores >= 3 && !user.achievements.some(a => a.type === 'Math Whiz' && a.completed)) {
+        newAchievements.push('Math Whiz');
+      }
+    }
+
+    if (courseId === 'programming' && courseAttempts >= 10) {
+      const codingAchievement = await prisma.achievement.upsert({
+        where: {
+          userId_type: {
+            userId,
+            type: 'Coding Master'
+          }
+        },
+        update: {
+          progress: courseAttempts,
+          maxProgress: 10,
+          completed: true
+        },
+        create: {
+          userId,
+          type: 'Coding Master',
+          progress: courseAttempts,
+          maxProgress: 10,
+          completed: true
+        }
+      });
+      if (!user.achievements.some(a => a.type === 'Coding Master')) {
+        newAchievements.push('Coding Master');
+      }
+    }
+
+    if (courseId === 'science' && courseAttempts >= 5) {
+      const scienceAchievement = await prisma.achievement.upsert({
+        where: {
+          userId_type: {
+            userId,
+            type: 'Science Explorer'
+          }
+        },
+        update: {
+          progress: courseAttempts,
+          maxProgress: 5,
+          completed: true
+        },
+        create: {
+          userId,
+          type: 'Science Explorer',
+          progress: courseAttempts,
+          maxProgress: 5,
+          completed: true
+        }
+      });
+      if (!user.achievements.some(a => a.type === 'Science Explorer')) {
+        newAchievements.push('Science Explorer');
       }
     }
 
     return newAchievements;
   } catch (error) {
     console.error('Error updating achievements:', error);
-    return [];
+    throw error;
   }
 }
 

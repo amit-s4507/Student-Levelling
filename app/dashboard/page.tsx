@@ -1,259 +1,308 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
-
-interface CourseProgress {
-  id: string;
-  title: string;
-  description: string;
-  progress: number;
-  icon: string;
-}
+import { useTheme } from 'next-themes';
 
 interface UserStats {
   points: number;
   level: string;
-  totalQuizzes: number;
-  courseProgress: Record<string, number>;
-  achievements: Array<{
+  quizzes: number;
+  achievements: {
     type: string;
     progress: number;
     maxProgress: number;
     completed: boolean;
-  }>;
-  studyStreak: number;
-  lastStudyDate: string | null;
+  }[];
 }
 
-export default function Dashboard() {
+interface LeaderboardEntry {
+  rank: number;
+  id: string;
+  name: string;
+  points: number;
+  level: number;
+  isCurrentUser: boolean;
+}
+
+const quickActions = [
+  {
+    title: 'Chat with AI',
+    description: 'Get instant help with your questions',
+    icon: '🤖',
+    href: '/Chat',
+    color: 'bg-blue-500',
+  },
+  {
+    title: 'Generate Images',
+    description: 'Create visual learning materials',
+    icon: '🎨',
+    href: '/Imagen',
+    color: 'bg-purple-500',
+  },
+  {
+    title: 'Join Study Group',
+    description: 'Learn together with peers',
+    icon: '👥',
+    href: '/study-groups',
+    color: 'bg-green-500',
+  },
+  {
+    title: 'View Progress',
+    description: 'Track your learning journey',
+    icon: '📊',
+    href: '/achievements',
+    color: 'bg-yellow-500',
+  },
+];
+
+export default function DashboardPage() {
   const { user } = useUser();
-  const [stats, setStats] = useState<UserStats>({
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const [userStats, setUserStats] = useState<UserStats>({
     points: 0,
     level: 'Beginner',
-    totalQuizzes: 0,
-    courseProgress: {},
-    achievements: [],
-    studyStreak: 0,
-    lastStudyDate: null
+    quizzes: 0,
+    achievements: []
   });
-  const [courses, setCourses] = useState<CourseProgress[]>([
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+
+  const [courses, setCourses] = useState([
     {
       id: 'programming',
       title: 'Programming Fundamentals',
       description: 'Learn the basics of programming with interactive lessons',
+      icon: '/icons/javascript.svg',
       progress: 0,
-      icon: '/icons/javascript.svg'
     },
     {
       id: 'math',
       title: 'Mathematics',
       description: 'Master mathematical concepts through gamified learning',
+      icon: '/icons/math.svg',
       progress: 0,
-      icon: '/icons/math.svg'
     },
     {
       id: 'science',
       title: 'Science',
       description: 'Explore scientific concepts with interactive experiments',
+      icon: '/icons/science.svg',
       progress: 0,
-      icon: '/icons/science.svg'
-    }
+    },
   ]);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    setMounted(true);
+    fetchUserStats();
+    fetchLeaderboard();
+  }, []);
+
+  const fetchUserStats = async () => {
       try {
         const response = await fetch('/api/user/stats');
         const data = await response.json();
-        setStats(data);
-        
-        // Update course progress using the courseProgress from API
-        setCourses(prev => prev.map(course => ({
+      setUserStats(data);
+      
+      // Update course progress from achievements
+      setCourses(prevCourses => prevCourses.map(course => {
+        const achievement = data.achievements?.find(
+          (a: any) => a.type === `${course.id}_progress`
+        );
+        return {
           ...course,
-          progress: data.courseProgress[course.id] || 0
-        })));
+          progress: achievement?.progress || 0
+        };
+      }));
       } catch (error) {
-        console.error('Error fetching user stats:', error);
-      }
-    };
-
-    if (user) {
-      fetchStats();
-      // Poll for updates every 5 seconds
-      const interval = setInterval(fetchStats, 5000);
-      return () => clearInterval(interval);
+      console.error('Failed to fetch user stats:', error);
     }
-  }, [user]);
+  };
 
-  const features = [
-    {
-      title: 'AI Chat Assistant',
-      description: 'Get help with your studies',
-      icon: '🤖',
-      link: '/Chat',
-      color: 'from-pink-500 to-rose-500'
-    },
-    {
-      title: 'Leaderboard',
-      description: 'See where you rank',
-      icon: '🏆',
-      link: '/Leaderboard',
-      color: 'from-yellow-400 to-orange-500'
-    },
-    {
-      title: 'Achievements',
-      description: 'View your badges',
-      icon: '🎯',
-      link: '/achievements',
-      color: 'from-green-400 to-emerald-500'
-    },
-    {
-      title: 'Image Generator',
-      description: 'Create learning visuals',
-      icon: '🎨',
-      link: '/Imagen',
-      color: 'from-blue-400 to-indigo-500'
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await fetch('/api/leaderboard');
+      const data = await response.json();
+      setLeaderboard(data.leaderboard.slice(0, 5)); // Show top 5 users
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
     }
-  ];
+  };
+
+  if (!mounted) return null;
 
   return (
-    <div className="min-h-screen p-8 space-y-8 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-      <div className="max-w-7xl mx-auto">
-        {/* User Stats */}
+    <div className="container py-8 space-y-8">
+      {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-12"
-        >
-          <div className="flex items-center gap-6 p-6 glass-effect rounded-2xl">
-            <div className="relative">
+        className="flex items-center gap-6 p-6 rounded-lg bg-gradient-to-r from-primary/10 via-primary/5 to-background border"
+      >
+        <div className="flex-shrink-0">
+          <motion.div
+            initial={{ scale: 0.5 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary/20"
+          >
               <Image
                 src={user?.imageUrl || '/default-avatar.png'}
                 alt="Profile"
-                width={80}
-                height={80}
-                className="rounded-full border-4 border-white shadow-lg"
+              fill
+              className="object-cover"
               />
-              <div className="absolute -bottom-2 -right-2 bg-green-400 p-2 rounded-full">
-                <span className="text-xl">✨</span>
+          </motion.div>
               </div>
+        <div className="space-y-2">
+          <motion.h1
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-2xl font-bold"
+          >
+            Welcome back, {user?.firstName || 'Student'}!
+          </motion.h1>
+          <div className="flex gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <span className="text-lg">🎯</span>
+              <span>Points: {userStats.points}</span>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold gradient-text">
-                Welcome back, {user?.firstName || 'Student'}!
-              </h1>
-              <div className="flex gap-6 mt-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🎯</span>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Points</p>
-                    <p className="font-bold">{stats.points}</p>
+            <div className="flex items-center gap-1">
+              <span className="text-lg">📚</span>
+              <span>Level: {userStats.level}</span>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">📚</span>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Level</p>
-                    <p className="font-bold">{stats.level}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">✅</span>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Quizzes</p>
-                    <p className="font-bold">{stats.totalQuizzes}</p>
-                  </div>
-                </div>
-              </div>
+            <div className="flex items-center gap-1">
+              <span className="text-lg">✅</span>
+              <span>Quizzes: {userStats.quizzes}</span>
+            </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Course Progress */}
-        <h2 className="text-2xl font-bold mb-6">My Learning Progress</h2>
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
+      <div className="grid gap-8 md:grid-cols-2">
+        <div className="space-y-4">
+          {/* Learning Progress */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold">My Learning Progress</h2>
+            <div className="grid gap-4">
+              <AnimatePresence>
           {courses.map((course, index) => (
             <motion.div
               key={course.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
               <Link href={`/courses/${course.id}`}>
-                <Card className="p-6 hover-card transition-transform duration-200 hover:scale-105 cursor-pointer">
+                      <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 p-2 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-lg bg-primary/10 p-2">
                     <Image
                       src={course.icon}
                       alt={course.title}
                       width={32}
                       height={32}
+                              className={theme === 'dark' ? 'invert' : ''}
                     />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">{course.title}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                          <div className="flex-1 space-y-2">
+                            <h3 className="font-medium">{course.title}</h3>
+                            <p className="text-sm text-muted-foreground">
                       {course.description}
                     </p>
-                    <div className="relative pt-1">
-                      <div className="flex mb-2 items-center justify-between">
-                        <div>
-                          <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full bg-blue-100 text-blue-600">
-                            Progress
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs font-semibold inline-block text-blue-600">
-                            {course.progress}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="overflow-hidden h-2 mb-4 text-xs flex rounded-full bg-blue-100">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${course.progress}%` }}
-                          transition={{ duration: 1, ease: "easeOut" }}
-                          className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
-                        />
-                      </div>
-                    </div>
+                            <Progress value={course.progress} className="h-2" />
+                            <p className="text-xs text-right text-muted-foreground">
+                              {course.progress}% Complete
+                            </p>
                   </div>
                 </div>
               </Card>
               </Link>
             </motion.div>
           ))}
+              </AnimatePresence>
         </div>
+          </section>
 
-        {/* Features Grid */}
-        <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
-        <div className="grid md:grid-cols-4 gap-6">
-          {features.map((feature, index) => (
+          {/* Quick Actions */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold">Quick Actions</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {quickActions.map((action, index) => (
             <motion.div
-              key={feature.title}
+                  key={action.title}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Link href={feature.link}>
-                <Card className="p-6 hover-card cursor-pointer h-full">
-                  <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${feature.color} flex items-center justify-center mb-4`}>
-                    <span className="text-2xl">{feature.icon}</span>
+                  <Link href={action.href}>
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer h-full">
+                      <div className="flex flex-col h-full">
+                        <div className="text-3xl mb-2">{action.icon}</div>
+                        <h3 className="font-medium mb-1">{action.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {action.description}
+                        </p>
                   </div>
-                  <h3 className="font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {feature.description}
-                  </p>
                 </Card>
               </Link>
             </motion.div>
           ))}
         </div>
+          </section>
+        </div>
+
+        {/* Leaderboard Section */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Top Performers</h2>
+            <Link href="/leaderboard">
+              <span className="text-sm text-primary hover:underline">View All</span>
+            </Link>
+          </div>
+          <Card className="p-6">
+            <div className="space-y-4">
+              {leaderboard.slice(0, 3).map((entry, index) => (
+                <motion.div
+                  key={entry.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`flex items-center justify-between p-3 rounded-lg ${
+                    entry.isCurrentUser ? 'bg-primary/10' : 'hover:bg-accent/5'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="text-2xl">
+                      {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                    </span>
+                    <div>
+                      <p className="font-medium">
+                        {entry.name}
+                        {entry.isCurrentUser && (
+                          <span className="ml-2 text-xs bg-primary/20 px-2 py-1 rounded-full">You</span>
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Level {entry.level}</p>
+                    </div>
+                  </div>
+                  <p className="text-xl font-bold text-primary">{entry.points}</p>
+                </motion.div>
+              ))}
+              {leaderboard.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">
+                  No leaderboard data available
+                </p>
+              )}
+            </div>
+          </Card>
+        </section>
       </div>
     </div>
   );

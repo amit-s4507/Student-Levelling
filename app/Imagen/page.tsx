@@ -1,136 +1,138 @@
 "use client";
 
 import { useState } from 'react';
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Image from 'next/image';
-import { useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 export default function ImagenPage() {
-  const { user, isLoaded } = useUser();
-  const router = useRouter();
-  const [prompt, setPrompt] = useState("");
-  const [style, setStyle] = useState("realistic");
-  const [image, setImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+    const [prompt, setPrompt] = useState('');
+    const [style, setStyle] = useState('realistic');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  // Redirect if not authenticated
-  if (isLoaded && !user) {
-    router.push('/sign-in');
-    return null;
-  }
+    const generateImage = async () => {
+        if (!prompt) {
+            setError('Please enter a prompt');
+            return;
+        }
 
-  const generateImage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prompt.trim()) return;
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await fetch('/api/imagen', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ prompt, style }),
+            });
 
-    setIsLoading(true);
-    setError(null);
-    setImage(null);
+            if (!response.ok) {
+                throw new Error('Failed to generate image');
+            }
 
-    try {
-      const response = await fetch("/api/imagen", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          prompt: prompt.trim(),
-          style: style
-        }),
-      });
+            const data = await response.json();
+            setImageUrl(data.url);
+        } catch (error) {
+            console.error('Error generating image:', error);
+            setError('Failed to generate image. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-      if (!response.ok) {
-        throw new Error('Failed to generate image');
-      }
-
-      const data = await response.json();
-      setImage(data.imageUrl);
-    } catch (err) {
-      setError("Failed to generate image. Please try again.");
-      console.error("Error:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
+            <div className="container mx-auto px-4 py-12">
+                <div className="max-w-4xl mx-auto">
+                    <h1 className="text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
+                        Learning Visual Generator
+                    </h1>
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Learning Visual Generator</h1>
-      <Card className="p-6 bg-card">
-        <form onSubmit={generateImage} className="space-y-4">
-          <div className="mb-6">
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              placeholder="Describe the learning concept you want to visualize..."
-              rows={4}
-              disabled={isLoading}
-            />
-            <div className="flex justify-between mt-2">
-              <Button
-                type="submit"
-                disabled={isLoading || !prompt.trim()}
-                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isLoading ? 'Generating...' : 'Generate Image'}
-              </Button>
-              <select
-                value={style}
-                onChange={(e) => setStyle(e.target.value)}
-                className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                disabled={isLoading}
-              >
-                <option value="realistic">Realistic</option>
-                <option value="cartoon">Cartoon</option>
-                <option value="sketch">Sketch</option>
-                <option value="diagram">Diagram</option>
-              </select>
-            </div>
-          </div>
-        </form>
+                    <Card className="p-6 mb-8 glass border-primary/20">
+                        <div className="flex flex-col gap-4">
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <Input
+                                        placeholder="Describe what you want to visualize..."
+                                        value={prompt}
+                                        onChange={(e) => setPrompt(e.target.value)}
+                                        className="w-full bg-background/50"
+                                    />
+                                </div>
+                                <Select
+                                    value={style}
+                                    onValueChange={setStyle}
+                                >
+                                    <SelectTrigger className="w-[180px] bg-background/50">
+                                        <SelectValue placeholder="Select style" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="realistic">Realistic</SelectItem>
+                                        <SelectItem value="cartoon">Cartoon</SelectItem>
+                                        <SelectItem value="artistic">Artistic</SelectItem>
+                                        <SelectItem value="minimalist">Minimalist</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-        <div className="mt-6">
-          {isLoading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            </div>
-          )}
-          
-          {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-200 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="shrink-0">⚠️</div>
-                <div>{error}</div>
-              </div>
-            </div>
-          )}
+                            <Button
+                                onClick={generateImage}
+                                disabled={loading || !prompt}
+                                className="w-full"
+                            >
+                                {loading ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin"></div>
+                                        Generating...
+                                    </div>
+                                ) : (
+                                    'Generate Image'
+                                )}
+                            </Button>
+                        </div>
+                    </Card>
 
-          {image && (
-            <div className="relative aspect-square w-full max-w-2xl mx-auto overflow-hidden rounded-lg shadow-xl">
-              <Image
-                src={image}
-                alt="Generated image"
-                fill
-                className="object-cover"
-                priority
-              />
+                    {error && (
+                        <Card className="p-6 mb-8 border-destructive/20 bg-destructive/5">
+                            <p className="text-destructive text-center">{error}</p>
+                        </Card>
+                    )}
+
+                    {imageUrl && !loading && (
+                        <Card className="p-6 glass border-primary/20">
+                            <div className="aspect-square relative rounded-lg overflow-hidden">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={imageUrl}
+                                    alt={prompt}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        </Card>
+                    )}
+
+                    {loading && (
+                        <Card className="p-6 glass border-primary/20">
+                            <div className="aspect-square flex items-center justify-center bg-background/50 rounded-lg">
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="text-muted-foreground">Creating your visualization...</p>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+                </div>
             </div>
-          )}
         </div>
-      </Card>
-    </div>
-  );
+    );
 }

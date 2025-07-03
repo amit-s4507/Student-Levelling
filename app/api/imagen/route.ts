@@ -18,56 +18,51 @@ export async function POST(request: Request) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const body = await request.json();
-    const { prompt, style = 'realistic' } = body;
-
+    const { prompt, style } = await request.json();
     if (!prompt) {
-      return new NextResponse('Missing prompt', { status: 400 });
+      return new NextResponse('Prompt is required', { status: 400 });
     }
 
     // Enhance prompt based on style
     let enhancedPrompt = prompt;
     switch (style) {
+      case 'realistic':
+        enhancedPrompt = `Create a photorealistic image of ${prompt}. The image should be highly detailed, with natural lighting, textures, and shadows. Focus on creating a lifelike representation with accurate proportions and materials.`;
+        break;
       case 'cartoon':
-        enhancedPrompt = `Create a cartoon-style educational illustration of: ${prompt}. Use bright colors and simple shapes.`;
+        enhancedPrompt = `Create a cartoon-style illustration of ${prompt}. Use bold colors, clean lines, and simplified shapes. The style should be playful and engaging, similar to modern animated shows.`;
         break;
-      case 'sketch':
-        enhancedPrompt = `Create a detailed sketch/drawing of: ${prompt}. Use clean lines and clear visual hierarchy.`;
+      case 'artistic':
+        enhancedPrompt = `Create an artistic interpretation of ${prompt}. Use expressive brushstrokes, creative color combinations, and artistic composition. The style should be reminiscent of digital paintings with attention to mood and atmosphere.`;
         break;
-      case 'diagram':
-        enhancedPrompt = `Create a clear, educational diagram of: ${prompt}. Include labels and arrows where appropriate.`;
+      case 'minimalist':
+        enhancedPrompt = `Create a minimalist design of ${prompt}. Use simple geometric shapes, limited color palette, and clean composition. Focus on essential elements while maintaining visual impact.`;
         break;
       default:
-        enhancedPrompt = `Create a realistic, detailed visualization of: ${prompt}. Focus on educational clarity.`;
+        enhancedPrompt = `Create a high-quality, visually appealing image of ${prompt}. Ensure proper composition, lighting, and detail.`;
     }
 
-    try {
-      const response = await openai.images.generate({
-        model: "dall-e-3",
-        prompt: enhancedPrompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "standard",
-        style: "natural"
-      });
+    // Add quality and composition guidelines
+    enhancedPrompt += ' The image should be well-composed, centered, with good lighting and contrast. Ensure high quality output with clear details and professional finish.';
 
-      if (!response.data?.[0]?.url) {
-        throw new Error('No image URL received from OpenAI');
-      }
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: enhancedPrompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "hd",
+      style: "vivid"
+    });
 
-      return NextResponse.json({
-        imageUrl: response.data[0].url
-      });
-    } catch (openaiError) {
-      console.error('OpenAI API Error:', openaiError);
-      if (openaiError.status === 429) {
-        return new NextResponse('Rate limit exceeded. Please try again later.', { status: 429 });
-      }
-      return new NextResponse('Failed to generate image. Please try again.', { status: 500 });
+    if (!response.data?.[0]?.url) {
+      throw new Error('No image URL received from OpenAI');
     }
 
+    return NextResponse.json({
+      url: response.data[0].url
+    });
   } catch (error) {
-    console.error('Image Generation API Error:', error);
+    console.error('Image generation error:', error);
     return new NextResponse(
       error instanceof Error ? error.message : 'Internal Server Error',
       { status: 500 }
